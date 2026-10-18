@@ -26,3 +26,37 @@ form.addEventListener('submit', async e => {
 });
 input.addEventListener('keydown', e => {if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {e.preventDefault(); form.requestSubmit();}});
 document.getElementById('clear').addEventListener('click', () => {if(busy)return; messages.length=0;area.replaceChildren(); const welcome=document.createElement('div');welcome.className='welcome';welcome.textContent='Chat cleared. Refreshing also clears this session.';area.appendChild(welcome);});
+
+// Welcome voice: browsers may require a user gesture for audible playback.
+const greeting = document.getElementById('greeting-audio');
+const voiceToggle = document.getElementById('voice-toggle');
+const voiceButton = document.getElementById('welcome-audio');
+const VOICE_PREF = 'ultron_welcome_voice_enabled';
+let voiceEnabled = localStorage.getItem(VOICE_PREF) !== 'false';
+function syncVoiceControls() {
+  voiceToggle.textContent = voiceEnabled ? 'Voice: On' : 'Voice: Off';
+  voiceToggle.setAttribute('aria-pressed', String(voiceEnabled));
+  voiceButton.hidden = !voiceEnabled;
+}
+async function playWelcome() {
+  if (!voiceEnabled) return;
+  try {
+    greeting.currentTime = 0;
+    await greeting.play();
+    voiceButton.textContent = '↻ Replay greeting';
+  } catch (_) {
+    // Browser autoplay policy: keep click-to-play fallback.
+    voiceButton.textContent = '▶ Enable welcome voice';
+    voiceButton.hidden = false;
+  }
+}
+voiceToggle.addEventListener('click', () => {
+  voiceEnabled = !voiceEnabled;
+  localStorage.setItem(VOICE_PREF, String(voiceEnabled));
+  if (!voiceEnabled) greeting.pause();
+  syncVoiceControls();
+  if (voiceEnabled) playWelcome();
+});
+voiceButton.addEventListener('click', playWelcome);
+syncVoiceControls();
+window.addEventListener('load', () => { if (voiceEnabled) playWelcome(); });

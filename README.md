@@ -96,3 +96,9 @@ Render free-plan eligibility, sleeping behavior and limits may change; consult R
 
 ## Roadmap
 Stabilize chat → improve observability/security → optional accounts → persistent chat history → long-term memory → configurable agents → voice I/O → wake-word privacy review → iPhone app.
+
+## V0.2 welcome voice prototype
+- The included synthesized robotic "Hello Stark" WAV at `static/audio/ultron-hello-stark.wav` is **not** the original film audio or an exact actor voice replica.
+- On page load, the browser attempts to play the greeting while Voice is On. If browser autoplay policy blocks sound, use the visible Play greeting button.
+- Voice On/Off is stored in this browser via localStorage. No extra TTS API calls required.
+- Streaming chat replies are not implemented in this prototype.
