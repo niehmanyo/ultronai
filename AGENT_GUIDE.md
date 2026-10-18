@@ -39,3 +39,6 @@ Read the repository and Git history before edits. Keep OpenAI as the provider, u
 
 ## New agent onboarding
 Read `AGENT_GUIDE.md` and `README.md`, inspect actual files and Git history, confirm branch and environment, run tests, enumerate implemented vs missing vs unverified, evaluate requested change impact, implement incrementally, and update tests, docs and changelog. Never assume this guide proves a deployment happened.
+
+## V0.3 changes
+The chat UI now calls `POST /api/chat/stream` (POST SSE delta/done/error), while the existing JSON endpoint remains. Stop generation aborts in the browser and avoids retaining partial assistant output in its context. A bundled WAV plays a synthetic “Hello Stark” greeting on user gesture; autoplay can be blocked by browser policy. Verify audio delivery, SSE behavior, and response cancellation after deployment. Do not claim verified movie-original voice replication.

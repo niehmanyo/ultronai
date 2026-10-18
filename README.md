@@ -102,3 +102,9 @@ Stabilize chat → improve observability/security → optional accounts → pers
 - On page load, the browser attempts to play the greeting while Voice is On. If browser autoplay policy blocks sound, use the visible Play greeting button.
 - Voice On/Off is stored in this browser via localStorage. No extra TTS API calls required.
 - Streaming chat replies are not implemented in this prototype.
+
+## V0.3: fixed voice greeting and streamed replies
+- `POST /api/chat/stream` streams Server-Sent Events with `delta`, `done`, and sanitized `error` events. It uses the official OpenAI Responses streaming interface; the original `/api/chat` remains for compatibility.
+- `static/app.js` incrementally renders actual output tokens, with a Stop button. Incomplete output is *not* retained as conversation context; the original prompt is restored on failure.
+- Audio greeting uses the bundled `static/audio/ultron-hello-stark.wav` file; it is a stylized synthetic voice, **not original movie audio**. The browser may block sound on page load; users must click the clearly labeled greeting button. Voice can be toggled off and persists locally.
+- Changes to the website require a GitHub push before Render auto-deploys them. A build success alone is not a streaming integration test; verify with a real OpenAI request.

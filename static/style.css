@@ -4,3 +4,7 @@
 .header-actions button { white-space:nowrap; }
 .header-actions button[hidden] { display:none; }
 @media (max-width:540px) { header { align-items:flex-start; gap:10px; } .header-actions { justify-content:flex-end; } .header-actions button { font-size:12px; padding:8px; } }
+
+#stop { background:#73483c; color:#fff; }
+.message.incomplete { opacity:.8; }
+button[hidden] { display: none !important; }

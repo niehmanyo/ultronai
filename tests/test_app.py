@@ -61,3 +61,38 @@ def test_rate_limit(client, monkeypatch):
 
 def test_body_limit(client):
     assert client.post('/api/chat',content=b'x'*(main.MAX_BODY+1),headers={'Content-Type':'application/json'}).status_code == 413
+
+def test_greeting_audio_served(client):
+    r = client.get('/static/audio/ultron-hello-stark.wav')
+    assert r.status_code == 200
+    assert r.content.startswith(b'RIFF')
+
+
+def test_stream_mock(client, monkeypatch):
+    monkeypatch.setenv('OPENAI_API_KEY', 'test-only')
+    async def fake_stream(messages):
+        yield 'Hello'
+        yield ' Stark'
+    monkeypatch.setattr(main, 'generate_stream', fake_stream)
+    result = client.post('/api/chat/stream', json={'messages':[{'role':'user','content':'hello'}]})
+    assert result.status_code == 200
+    assert 'text/event-stream' in result.headers['content-type']
+    assert 'event: delta' in result.text
+    assert 'Hello' in result.text and ' Stark' in result.text
+    assert 'event: done' in result.text
+
+
+def test_stream_missing_key(client, monkeypatch):
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
+    assert client.post('/api/chat/stream', json={'messages':[{'role':'user','content':'hi'}]}).status_code == 503
+
+
+def test_stream_error_is_sanitized(client, monkeypatch):
+    monkeypatch.setenv('OPENAI_API_KEY', 'test-only')
+    async def broken(messages):
+        yield 'partial'
+        raise RuntimeError('private upstream exception')
+    monkeypatch.setattr(main, 'generate_stream', broken)
+    result = client.post('/api/chat/stream', json={'messages':[{'role':'user','content':'hello'}]})
+    assert 'event: error' in result.text
+    assert 'private upstream exception' not in result.text

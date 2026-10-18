@@ -6,7 +6,9 @@ from threading import Lock
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+import json
+import logging
 from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI, APIConnectionError, APITimeoutError, AuthenticationError, RateLimitError, APIStatusError
 from pydantic import BaseModel, Field, ConfigDict
@@ -46,7 +48,7 @@ class ChatResponse(BaseModel):
 
 @app.middleware('http')
 async def guard(request: Request, call_next):
-    if request.url.path == '/api/chat':
+    if request.url.path in ('/api/chat', '/api/chat/stream'):
         length = request.headers.get('content-length')
         if length:
             try:
@@ -110,3 +112,61 @@ async def chat(payload: ChatRequest):
         raise HTTPException(504, 'AI service temporarily unavailable')
     except APIStatusError:
         raise HTTPException(502, 'AI service error')
+
+
+# Streaming endpoint: SSE (POST /api/chat/stream), with one event per text delta.
+# Errors after stream startup are delivered as sanitized SSE error events.
+def sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+async def generate_stream(messages):
+    client = AsyncOpenAI(api_key=os.environ['OPENAI_API_KEY'], timeout=60.0, max_retries=0)
+    async with client.responses.stream(
+        model=MODEL,
+        instructions=SYSTEM,
+        input=[{'role': m.role, 'content': m.content} for m in messages],
+        max_output_tokens=MAX_TOKENS,
+    ) as stream:
+        async for event in stream:
+            if event.type == 'response.output_text.delta':
+                yield event.delta
+            elif event.type == 'response.failed':
+                raise RuntimeError('Response generation failed')
+        final = await stream.get_final_response()
+        if getattr(final, 'status', None) in ('failed', 'incomplete'):
+            raise RuntimeError('Response not completed')
+
+@app.post('/api/chat/stream')
+async def chat_stream(payload: ChatRequest):
+    if payload.messages[-1].role != 'user':
+        raise HTTPException(422, 'Last message must be from user')
+    if not os.getenv('OPENAI_API_KEY'):
+        raise HTTPException(503, 'AI service is not configured')
+
+    async def events():
+        try:
+            any_text = False
+            async for delta in generate_stream(payload.messages):
+                if delta:
+                    any_text = True
+                    yield sse('delta', {'text': delta})
+            if not any_text:
+                yield sse('error', {'message': 'AI returned an empty response'})
+            else:
+                yield sse('done', {})
+        except AuthenticationError:
+            yield sse('error', {'message': 'AI service configuration error'})
+        except RateLimitError:
+            yield sse('error', {'message': 'AI service rate limited or out of quota'})
+        except (APITimeoutError, APIConnectionError):
+            yield sse('error', {'message': 'AI service temporarily unavailable'})
+        except (APIStatusError, RuntimeError):
+            yield sse('error', {'message': 'AI service error'})
+        except Exception:
+            logging.getLogger(__name__).exception('Streaming request failed (content not logged)')
+            yield sse('error', {'message': 'Unexpected AI service error'})
+
+    return StreamingResponse(events(), media_type='text/event-stream', headers={
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+    })
