@@ -14,7 +14,7 @@ if ! command -v node >/dev/null || ! command -v npm >/dev/null || ! command -v n
 fi
 NODE_VERSION="$(node -p 'process.versions.node')"
 echo "[Ultron] Node: $NODE_VERSION | npm: $(npm -v) | npx: $(npx --version)"
-if ! node -e 'const [maj,min]=process.versions.node.split(".").map(Number);process.exit(!((maj===22&&min>=19)||maj>=24))'; then
+if ! node -e 'const [maj,min]=process.versions.node.split(".").map(Number);process.exit(((maj===22&&min>=19)||maj>=24) ? 0 : 1)'; then
   echo '[Ultron] ERROR: DSH requires Node 22.19+ or 24+. Upgrade Node and rerun.' >&2
   exit 2
 fi
