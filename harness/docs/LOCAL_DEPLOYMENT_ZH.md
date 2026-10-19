@@ -54,3 +54,49 @@ chmod 700 "$DSH_HOME"
 官方安装：https://github.com/deepseek-ai/deepseek-harness#run
 
 OpenAI 模型配置：https://deepseek-harness.github.io/deepseek-harness/en/guide/providers
+
+## 六、Ultron 品牌与 OpenAI 模型（验收分支）
+
+**适用分支：** `feature/ultron-branding-openai`。当前只是分支提交，未经用户验收不会创建 PR/MR，更不会改动线上 Render 服务。
+
+### 1. 获取代码
+
+```bash
+cd ~/Downloads/ultron-web
+git fetch origin
+git switch feature/ultron-branding-openai
+git pull --ff-only origin feature/ultron-branding-openai
+cd harness
+```
+
+如果项目不在上述目录，请换成自己的路径。如果本地存在未提交修改，先保存或提交，避免切换分支冲突。
+
+### 2. 配置 ChatGPT AI（实际使用 OpenAI API）
+
+```bash
+bash configure-openai.sh
+```
+
+如果提示新建了 `$DSH_HOME/profiles/web/cordis.patch.yml`，说明新注册了名称为 **ChatGPT AI** 的 OpenAI Provider（未写入密钥）。如果提示 `Existing dsh profile detected`，说明本地已有自定义配置，**为保护已有数据脚本不会覆盖它**；直接到运行中的 dsh 页面 **Settings → Models → Add model provider → Third-party → openai**，输入 OpenAI Platform 的 API Key，保存并选择 `gpt-4.1-mini` 等支持的模型。用户此前 Render 的 API Key 不会自动迁移到本地 dsh。
+
+不要把 API Key 粘贴进 Git 文件。ChatGPT Plus 订阅不等于 OpenAI API 余额。
+
+### 3. 在 Chrome 加载 Ultron 品牌
+
+浏览器打开 `chrome://extensions`，启用右上角“开发者模式”，点击“加载已解压的扩展程序”，选中仓库中 `harness/branding/chrome-extension` 文件夹。刷新本机 `http://127.0.0.1:3080` 页面：标签页标题将尝试改为 Ultron、网页 favicon 切换为原创 Ultron 图标，顶部品牌文案与图标根据当前 DOM 调整。若上游页面更改，可能退化成左下角 Ultron 标记。这是**本地浏览器呈现层覆盖**，不修改官方 npm 包的源代码；其他浏览器不会同步更改。
+
+### 4. 启动与验收
+
+```bash
+bash start-local.sh
+```
+
+在 Chrome 中验收：① 标签标题不显示 DeepSeek Harness；② Ultron 图标出现；③ Settings → Models 里有 OpenAI 提供方（新 Profile 应显示 ChatGPT AI，已有 Profile 按第 2 步手动配置）；④ 选择模型后完成一条真正的 Agent 对话，并在 OpenAI Platform 查看 API 用量。如果失败，不要把 API Key 或认证 URL 发给他人。
+
+### 5. 回退
+
+- 视觉：在 `chrome://extensions` 里停用“Ultron Local Branding”并刷新网页。
+- 模型：在 dsh Settings → Models 删除或修改 OpenAI Provider。只在明确了解原配置情况下才手工处理 `$DSH_HOME/profiles/web/cordis.patch.yml`；不要删除 `.credentials.yaml` 中其他已有密钥。
+- 代码：`git switch main`。切换代码分支不会自动清除本地 dsh 配置、会话或凭据。
+
+> 安全：浏览器扩展只在 localhost / 127.0.0.1 的 3080 端口执行 UI 逻辑；Harness 不得未经认证公开到互联网。这里的 Logo 是原创机器人元素，不使用电影版 Ultron 官方素材。
