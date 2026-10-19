@@ -40,3 +40,38 @@ DSH Web UI → Cordis plugin composition / Agent Loop → Tool executions + appr
 
 Upstream: https://github.com/deepseek-ai/deepseek-harness
 Provider setup: https://deepseek-harness.github.io/deepseek-harness/en/guide/providers
+
+## V0.5 Ultron branding and ChatGPT AI (local)
+
+This feature is staged on `feature/ultron-branding-openai` pending user acceptance. It is **not merged** and not deployed to Render.
+
+### Get this branch
+
+```bash
+git fetch origin
+git switch feature/ultron-branding-openai
+git pull --ff-only origin feature/ultron-branding-openai
+cd harness
+```
+
+### 1. OpenAI model provider (OpenAI Platform, not ChatGPT subscription)
+
+```bash
+bash configure-openai.sh
+```
+
+When no Web profile patch exists, this creates a minimal `openai` provider named **ChatGPT AI** and references `OPENAI_API_KEY`. **It does not read or store secrets.** When a profile already exists, it refuses to overwrite it: use dsh **Settings → Models → Add model provider → Third-party → openai**, enter your OpenAI Platform key privately, save, and select an available OpenAI model (for example `gpt-4.1-mini`). The original configuration is preserved.
+
+### 2. Local Ultron branding (Chrome)
+
+In Chrome open `chrome://extensions`, enable Developer mode, press **Load unpacked**, and select `harness/branding/chrome-extension`. Refresh the local dsh Web UI on **http://127.0.0.1:3080**. This Chrome-only local extension changes tab title, favicon, visible brand text and adds an **original** Ultron-style SVG mark. It works on the locally running UI only; it does not modify the upstream dsh npm package. The built-in site branding can differ if upstream changes its DOM. Chrome extension permissions cover localhost hostnames, while its code explicitly refuses to operate outside port 3080.
+
+### 3. Start and test
+
+```bash
+bash start-local.sh
+```
+
+Keep the terminal open. In Settings > Models select the OpenAI model, run a short task, and inspect usage on OpenAI Platform. Confirm no API key appears in Git. To revert the visual change, disable/remove the Chrome extension; to revert provider setup, restore the local dsh profile backup or edit the provider in Settings.
+
+This is an interim branding adapter, not a separately compiled or fully rebranded dsh frontend. Do **not** expose the tool-enabled Agent to the public internet.
