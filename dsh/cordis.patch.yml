@@ -1,0 +1,9 @@
+# DSH official Cordis SDK profile OpenAI route. Secret stays in Render Environment.
+- id: llm-pi-ai
+  config:
+    providers:
+      openai:
+        apiKeyEnv: OPENAI_API_KEY
+        retryPolicy:
+          mode: normal
+          maxRetries: 1
