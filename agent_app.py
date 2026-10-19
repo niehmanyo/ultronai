@@ -1,5 +1,5 @@
 """Separate protected DSH preview app; production main.py is untouched."""
-import asyncio,json,logging,os
+import asyncio,json,logging,os,re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from fastapi import FastAPI,HTTPException,Request
@@ -38,7 +38,7 @@ async def logout(request:Request):
 @app.post('/api/dsh/run')
 async def run(request:Request,payload:Prompt):
     sec.must_auth(request);sec.same_origin(request)
-    if payload.session_id and (not payload.session_id.startswith('ultron-') or len(payload.session_id)>90):
+    if payload.session_id and not re.fullmatch(r'ultron-[0-9a-f]{32}',payload.session_id):
         raise HTTPException(422,'Invalid session identifier')
     if not os.environ.get('OPENAI_API_KEY'):raise HTTPException(503,'OpenAI API key is not configured')
     if os.environ.get('ULTRON_DSH_UNSAFE_AGENT_PREVIEW')!='I_ACCEPT_TOOL_RISK':
