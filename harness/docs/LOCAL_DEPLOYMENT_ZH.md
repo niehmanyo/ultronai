@@ -54,3 +54,28 @@ chmod 700 "$DSH_HOME"
 官方安装：https://github.com/deepseek-ai/deepseek-harness#run
 
 OpenAI 模型配置：https://deepseek-harness.github.io/deepseek-harness/en/guide/providers
+
+
+## 六、3080 拒绝连接且 npx 静默退出
+
+如果 `curl --noproxy '*' http://127.0.0.1:3080/` 返回 Connection refused，而 `npx --yes @deepseek-ai/dsh web --no-open` 什么也不显示就结束，说明 Web 服务未保持运行。不要优先修改 Chrome 代理或关闭防火墙。
+
+更新本分支后运行：
+
+```bash
+cd ultronai/harness
+bash start-local.sh
+```
+
+新版启动器会检查 Node.js 版本，显示 npm/npx 版本，将启动输出记录在 `~/.ultron-dsh/logs/`，并且在 dsh 意外退出后给出诊断命令（不能再把静默退出误认为启动成功）。**注意：此改动提高诊断能力，不代表已经确认并修复 dsh 的实际退出根因。**
+
+如果仍静默退出，在本机执行：
+
+```bash
+node -v
+npm view @deepseek-ai/dsh version engines bin --json
+npm config get registry
+npm cache ls @deepseek-ai/dsh
+```
+
+然后检查 `~/.npm/_logs/` 下最新 debug 日志。不要上传含 API Key、认证 token 或本机隐私信息的日志。请先检查 Node 是否为 22.19+ 或 24+，再诊断 package 缓存/安装。只有确认 3080 确实被占用时才改端口。
