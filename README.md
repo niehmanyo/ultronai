@@ -33,7 +33,7 @@ DSH Web UI → Cordis plugin composition / Agent Loop → Tool executions + appr
 
 - Keep DSH local only. Do not point Render's public URL to an unrestricted tool-executing agent.
 - Configure `DSH_HOME` outside Git. Never publish API keys, DSH credential files or authenticated launch URLs.
-- Skills use explicit user-approved text memory, **not** automatic vector retrieval.
+- V0.6 adds a user-approved SQLite Memory Engine with lexical recall, consent-gated proposals, update and deletion; **not** automatic vector retrieval.
 - Previous FastAPI Web UI, streaming, Hello Stark audio and PostgreSQL schema are separate and not automatically integrated into official dsh.
 - Existing Render `main` branch deployment is unchanged.
 - The official DSH is a developer preview: check and pin a published npm version before production use.
@@ -75,3 +75,31 @@ bash start-local.sh
 Keep the terminal open. In Settings > Models select the OpenAI model, run a short task, and inspect usage on OpenAI Platform. Confirm no API key appears in Git. To revert the visual change, disable/remove the Chrome extension; to revert provider setup, restore the local dsh profile backup or edit the provider in Settings.
 
 This is an interim branding adapter, not a separately compiled or fully rebranded dsh frontend. Do **not** expose the tool-enabled Agent to the public internet.
+
+## V0.6 — Local Memory Engine (acceptance branch)
+
+**Branch:** `feature/v0.6-memory-engine`. No PR created; local user acceptance required before merging. This extends the actual **official dsh workspace Skill**, not a custom Agent Loop.
+
+- `harness/memory/cli.py`: durable SQLite memory CLI (stdlib only).
+- `harness/memory/tests/test_cli.py`: offline tests covering staged proposals, explicit approval, rejection, persistence across processes, edits, forgetting, scope and secret detection.
+- `harness/ultron-workspace/.dsh/skills/memory/SKILL.md`: the agent's recall and consent workflow.
+- `harness/docs/MEMORY_V06_ZH.md`: full Chinese deployment, CLI commands, browser acceptance and privacy limitations.
+
+### Quick start
+
+```bash
+git fetch origin
+git switch feature/v0.6-memory-engine
+cd harness
+python3 -m unittest discover -s memory/tests -v
+python3 memory/cli.py propose --action add --text "Prefer Chinese explanations."
+python3 memory/cli.py proposals
+# Read proposal_id, approve ONLY if explicitly agreed:
+python3 memory/cli.py approve --proposal-id YOUR_PROPOSAL_ID
+python3 memory/cli.py search Chinese
+bash start-local.sh
+```
+
+Your approved memories are stored **outside Git** in `$DSH_HOME/memory/ultron.sqlite3`, default `~/.ultron-dsh/memory/ultron.sqlite3`. Private memories must not be committed. DSH Sessions and Memory are separate. Model-based semantic extraction, background memory consolidation, encryption at rest, and vector retrieval are not included in this increment.
+
+See [Chinese V0.6 manual](harness/docs/MEMORY_V06_ZH.md).
