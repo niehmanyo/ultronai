@@ -100,3 +100,45 @@ bash start-local.sh
 - 代码：`git switch main`。切换代码分支不会自动清除本地 dsh 配置、会话或凭据。
 
 > 安全：浏览器扩展只在 localhost / 127.0.0.1 的 3080 端口执行 UI 逻辑；Harness 不得未经认证公开到互联网。这里的 Logo 是原创机器人元素，不使用电影版 Ultron 官方素材。
+
+
+## 七、OpenAI API 直连超时，系统代理可以访问（7890）
+
+**已确认的案例**：`curl https://api.openai.com/v1/models` 连接超时；`curl --proxy http://127.0.0.1:7890 https://api.openai.com/v1/models` 返回 HTTP 401。这说明代理通道到达 OpenAI，401 是因为诊断请求没有带 API Key，不是网络错误。
+
+最新 `start-local.sh` 在 macOS 上会检查系统 HTTPS 代理；仅在未手动指定 HTTPS_PROXY/ALL_PROXY，且系统代理目标为 `127.0.0.1` 或 `localhost`、端口在监听时，才把它转成 `HTTP_PROXY` 与 `HTTPS_PROXY` 供官方 dsh 使用。**不会修改 macOS 网络设置或 Git 中的凭据。**
+
+### 拉取并重启
+
+```bash
+cd ~/Downloads/ultron-web
+git switch feature/ultron-branding-openai
+git pull --ff-only origin feature/ultron-branding-openai
+cd harness
+# 在运行 dsh 的旧终端 Ctrl+C 停止，再执行：
+bash start-local.sh
+```
+
+期望日志显示：`[Ultron] Using macOS local HTTP proxy for dsh: 127.0.0.1:7890`。保持终端运行；浏览器打开 `http://127.0.0.1:3080`，选择 OpenAI 模型，新建 Session 发送一条简短测试消息。
+
+### 单次手动指定 / 不使用自动代理
+
+```bash
+HTTPS_PROXY=http://127.0.0.1:7890 HTTP_PROXY=http://127.0.0.1:7890 bash start-local.sh
+# 不检测 macOS 系统代理：
+ULTRON_PROXY_AUTO=0 bash start-local.sh
+```
+
+若自动检测没有识别到代理，用第一条手动命令。**不要在终端输出或仓库中粘贴 API Key。**
+
+### 验收
+
+1. 终端显示代理已配置（或已自动检测 7890）；
+2. dsh 能打开本地 Web UI；
+3. Settings → Models 显示 OpenAI provider，选择实际可用模型；
+4. 新建 Session 请求 `Reply exactly OK`，得到模型响应；
+5. 如收到 `401 invalid_api_key`、`429 insufficient_quota`，说明请求已经进入 API 认证/计费阶段，需要分别检查 Key 或余额。只有获得真实回复才算端到端验收。
+
+官方参考：https://deepseek-harness.github.io/deepseek-harness/en/guide/network-proxy
+
+说明：代理支持由 dsh 的实际安装版本决定。若设置后仍不能连接，先检查启动日志及该版本的代理支持；不要通过关闭 TLS 证书验证来“解决”。
