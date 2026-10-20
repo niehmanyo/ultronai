@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Ultron Local Branding",
+  "version": "0.1.0",
+  "description": "Local-only Ultron branding for dsh Web UI.",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "ultron-logo.svg"
+      ],
+      "matches": [
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ]
+    }
+  ]
+}
