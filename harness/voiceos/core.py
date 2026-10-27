@@ -7,6 +7,7 @@ Requires explicit OPENAI_API_KEY in the process environment; never prints it.
 from __future__ import annotations
 
 import argparse
+import re
 import os
 import select
 import subprocess
@@ -160,6 +161,19 @@ def doctor(args) -> int:
     return 0
 
 
+def safe_diagnostic(exc: Exception) -> str:
+    """Expose actionable SDK error text without printing API keys or huge payloads."""
+    message = str(exc)
+    secret = os.getenv("OPENAI_API_KEY", "")
+    if secret:
+        message = message.replace(secret, "[REDACTED_API_KEY]")
+    message = re.sub(r"sk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{12,}", "[REDACTED_TOKEN]", message)
+    message = re.sub(r"(?i)(authorization\s*[:=]\s*bearer\s+)\S+", r"\1[REDACTED]", message)
+    message = re.sub(r"(?i)((?:api[_-]?key|password|token)\s*[:=]\s*)\S+", r"\1[REDACTED]", message)
+    message = message.replace("\n", " ").replace("\r", " ")
+    return f"{type(exc).__name__}: {message[:700]}"
+
+
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     if sys.platform != "darwin":
@@ -219,7 +233,8 @@ def main(argv=None) -> int:
         print("\n[VoiceOS] Interrupted.")
     except Exception as exc:
         # Never print credential values or full model request objects.
-        print(f"[VoiceOS] Error: {type(exc).__name__}. Check your DSH profile, model credentials, permissions and network; sensitive details are intentionally omitted.", file=sys.stderr)
+        print("[VoiceOS] Error:", safe_diagnostic(exc), file=sys.stderr)
+        print("[VoiceOS] If initialization failed, confirm the SDK profile actually registers the OpenAI provider/model. Web profile settings do not imply SDK profile compatibility.", file=sys.stderr)
         return 1
     return 0
 
