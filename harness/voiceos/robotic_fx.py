@@ -52,7 +52,7 @@ def process_robotic(source: Path, target: Path, *, strength: int = 25) -> Path:
 
     # Actual effect mix: the old implementation accidentally made
     # 45% strength nearly inaudible through very small multiplied gains.
-    # New mapping: 25 -> 35% wet, 45 -> 56% wet, 70 -> 78% wet.
+    # New mapping: 25 -> ~48% wet, 45 -> ~64% wet, 70 -> ~82% wet.
     mix = 0.12 + 0.88 * (amount ** 0.65)
     out = (1.0 - mix) * samples + mix * wet
 
