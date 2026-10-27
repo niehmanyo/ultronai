@@ -1,3 +1,5 @@
+# SDK currently ships a prerelease; pin it explicitly so pip does not silently filter it.
+# Requires Python >=3.10, macOS >=14 and arm64.
 openai>=1.65,<3
 sounddevice>=0.5,<1
-deepseek-harness-sdk
+deepseek-harness-sdk==0.1.5rc1
