@@ -36,11 +36,26 @@ PERSONAS = {
     "sovereign": {
         "voice": "onyx",
         "instructions": (
-            "An original futuristic AI command voice, with deep resonant tone, "
-            "deliberate rhythm and restrained intensity. Natural speech, "
-            "very subtle metallic texture conveyed only through precise delivery; "
-            "no theatrical villain performance. Fluent Mandarin and English; "
-            "respond in the language of the text. Do not impersonate any individual."
+            "Speak as an original, austere machine intelligence. Deep, dark, firm, "
+            "emotionally distant adult male-presenting voice. No smile in the voice, "
+            "no warmth, reassurance, friendliness, or customer-service intonation. "
+            "Short, sharp declarative phrasing; deliberate controlled tempo; "
+            "flat sentence endings and metallic precision. Sound cold and formidable "
+            "without shouting or theatrical villainy. Maintain crisp intelligibility "
+            "in English or Mandarin. Never mimic any actor or copyrighted character."
+        ),
+    },
+    "glacial": {
+        "voice": "onyx",
+        "instructions": (
+            "Original cold synthetic-command voice, masculine and low-pitched. "
+            "Extremely restrained emotion: grave, severe, impersonal and unyielding. "
+            "Speak English with crisp clipped consonants, long steady vowels, "
+            "measured pauses and a slight metallic machine-like regularity. "
+            "Every sentence lands with a decisive falling cadence. "
+            "No soft reassurance, no cheerfulness, no conversational warmth, "
+            "no smiling or sing-song melody. Pronounce each word with authority; "
+            "do not growl, shout, distort or imitate any identifiable actor."
         ),
     },
 }
@@ -50,8 +65,9 @@ SAMPLE_CN = (
     "我已准备就绪，可以协助分析问题、执行任务，并报告进展。"
 )
 SAMPLE_EN = (
-    "Ultron online. All systems operational. "
-    "Ready to assist with analysis, execution, and clear reporting."
+    "Ultron online. Core systems synchronized. "
+    "Threat assessment complete. Authorization confirmed. "
+    "State your objective. I will execute with precision."
 )
 
 
