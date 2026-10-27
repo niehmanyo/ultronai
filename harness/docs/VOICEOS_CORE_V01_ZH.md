@@ -27,12 +27,22 @@ cd harness
 需要 macOS 14+ on Apple Silicon，Python 3.10+。Python SDK 提供匹配的 native runtime，**它会启动一个独立的 DSH SDK 进程，不会自动接管已打开的 DSH Web UI Session**。
 
 \`\`\`bash
+python3 --version
+uname -m
+# 必须 Python >= 3.10、arm64；若 Python 太旧，安装新版 Python 后重建虚拟环境
 python3 -m venv .venv-voiceos
 source .venv-voiceos/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r voiceos/requirements.txt
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install --pre -r voiceos/requirements.txt
 python -m unittest discover -s voiceos/tests -v
 \`\`\`
+
+**pip 提示 No matching distribution found for deepseek-harness-sdk 时**：
+1. 先运行 `python -V`、`uname -m`、`python -m pip --version`。
+2. SDK 当前发布的是 `0.1.5rc1`（预发布版），本仓库已显式固定版本；请使用上方的 `--pre` 命令。
+3. 如果当前虚拟环境 Python 低于 3.10，使用 Python 3.11/3.12 创建全新虚拟环境，不能只升级 pip。
+4. 如果 `uname -m` 为 `x86_64` 且你的 Mac 是 Apple Silicon，请检查是否在 Rosetta 下运行 Terminal 或 Python；官方 SDK 的 macOS runtime wheel 仅支持 arm64。
+5. 如果仍失败，检查公司/校园 PyPI 镜像是否同步了预发布包；可使用 `python -m pip index versions --pre deepseek-harness-sdk` 诊断。
 
 macOS 首次录音时需要授予 **Terminal 或当前使用的终端 App** 麦克风权限；如果失败，请检查 **系统设置 → 隐私与安全性 → 麦克风**。某些音频设备无法以 16 kHz 直接打开，需要切换系统输入设备。
 
