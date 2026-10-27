@@ -47,6 +47,7 @@ def main():
     print("[VoiceOS] AI-generated voice previews. Not an imitation of any actor.")
     print("[VoiceOS] Calls OpenAI TTS and may incur API charges.")
     for persona in selected:
+        print(f"[VoiceOS] Generating {persona.upper()} ({args.language})...", flush=True)
         target = args.output_dir / f"ultron-{persona}-{args.language}.wav"
         synthesize(client, script, target, persona=persona, model=args.model)
         print(f"[VoiceOS] Saved {target}")
