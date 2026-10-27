@@ -153,3 +153,18 @@ python voiceos/core.py --text '你好 Ultron，请用中文介绍自己' --no-sp
 `core.py` 将这个只含**公开配置**的文件通过 `DeepSeekHarness(patches=(...))` 传入 SDK。官方完整 `sdk` profile 挂载 `llm-pi-ai`，补丁为其声明 `openai` 模型路由；通过进程环境使用已经设置的 API Key。没有修改 `$DSH_HOME/profiles/web/` 或浏览器里已生效的 OpenAI 设置。
 
 若报 `UNKNOWN_MODEL`，换用当前 SDK 目录确实支持的 OpenAI 模型；若报 `MISSING_CREDENTIAL`，检查当前进程 `OPENAI_API_KEY` 是否已 export；若成功看到 `[Ultron]` 回复，继续运行 `python voiceos/core.py` 验收录音。
+
+## 10. 已验收 Agent 文本回答，但麦克风提示 `No module named 'numpy'`
+
+`sounddevice.InputStream` 的缓冲区处理依赖 NumPy。VoiceOS 依赖文件已加入 `numpy>=1.26,<3`；在激活的 Python 3.12 虚拟环境中执行：
+
+```bash
+cd ~/Downloads/ultron-web
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+python -m pip install -r voiceos/requirements.txt
+python voiceos/core.py --doctor
+python voiceos/core.py
+```
+
+期待 doctor 输出 `numpy: installed`。文本 Agent 已经能返回正常回答，不需要重新生成 API Key，也不需要调整代理或 SDK Provider。按 Enter 录音、再按 Enter 停止，随后检查 `[You]` 识别内容和 `[Ultron]` 回复。如果出现录音设备或系统授权错误，请单独处理 macOS 麦克风权限。
