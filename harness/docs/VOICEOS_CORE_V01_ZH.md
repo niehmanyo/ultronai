@@ -243,3 +243,40 @@ python voiceos/core.py --hands-free --vad-threshold 950
 **明确的限制**：ASR 仍是整段音频发送；DSH `run()` 仍需等待整轮结束才返回最终文本；`say` 仍为整段播报。当前不存在逐 Token TTS/持续全双工音频，也没有声学回声消除。打断算法是实验性的，会受耳机、声量、噪声和麦克风增益影响。
 
 未经用户 Mac 实机测试，本次只能算代码已交付，不能宣称自然打断已通过验收。
+
+
+## 13. ULTRON Original Voice · V0.1
+
+三套原创声音风格：Prime（沉稳磁性）、Sentinel（优雅亲切）、Sovereign（低沉未来感）。这是内置声音加朗读风格指令，不是演员原声克隆，也不是独一无二且永久保存的声纹。
+
+### Mac 本地生成三个中文 WAV 试听
+
+```bash
+cd ~/Downloads/ultron-web
+git switch feature/voiceos-core-mvp
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python voiceos/preview_voices.py --language zh --play
+```
+
+三个声音预览保存在本地 harness/voiceos/voice-previews/ 下。当前 OPENAI_API_KEY 需要已设置，合成 API 产生费用。仅试听一种可以运行：
+
+```bash
+python voiceos/preview_voices.py --persona prime --language zh --play
+```
+
+### 在 VoiceOS 连续语音中使用
+
+```bash
+python voiceos/core.py --hands-free --tts openai --persona prime
+python voiceos/core.py --hands-free --tts openai --persona sentinel
+python voiceos/core.py --hands-free --tts openai --persona sovereign
+```
+
+旧版 `python voiceos/core.py --hands-free` 仍使用系统 say；不受影响。OpenAI TTS 采用先合成 WAV 再 afplay 的整段播放方式，暂不支持 `--barge-in`，程序会显式拒绝此组合。合成可能增加响应延迟和费用；应明确告知听众声音为 AI 生成。
+
+### 不等同于 OpenAI Prompt-to-Voice 的永久自定义声纹
+
+OpenAI Speech API 的 gpt-4o-mini-tts 已公布于 2027-01-06 停止支持，因此这里只作为试听/临时过渡。若决定打造永久 Voice ID，可使用官方 POST /v1/audio/voices Prompt-to-Voice 生成，**但文字提示生成的 Voice ID 仅适用于 GPT-Live，不能传给现有 /v1/audio/speech**。后续需要用 GPT-Live 语音前端对接 DSH Agent 的任务执行。
