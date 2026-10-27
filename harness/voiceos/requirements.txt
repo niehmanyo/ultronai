@@ -2,4 +2,6 @@
 # Requires Python >=3.10, macOS >=14 and arm64.
 openai>=1.65,<3
 sounddevice>=0.5,<1
+# sounddevice's InputStream callback uses NumPy internally.
+numpy>=1.26,<3
 deepseek-harness-sdk==0.1.5rc1
