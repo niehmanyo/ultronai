@@ -53,7 +53,7 @@ def capture_wav(output: Path, *, samplerate: int = 16000, max_seconds: int = 45)
     try:
         import sounddevice as sd
     except ImportError as exc:
-        raise RuntimeError("Install microphone dependencies: python3 -m pip install -r voiceos/requirements.txt") from exc
+        raise RuntimeError("Install microphone dependencies: python -m pip install -r voiceos/requirements.txt") from exc
 
     frames: list[bytes] = []
     print("[VoiceOS] Recording... press Enter to stop. (Ctrl+C cancels)")
@@ -73,6 +73,8 @@ def capture_wav(output: Path, *, samplerate: int = 16000, max_seconds: int = 45)
                     break
     except KeyboardInterrupt:
         raise
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(f"Microphone Python dependency missing: {exc.name}; run python -m pip install -r voiceos/requirements.txt") from exc
     except Exception as exc:
         raise RuntimeError(f"Microphone capture failed: {exc}; check macOS Microphone permission and input device") from exc
 
@@ -145,7 +147,7 @@ def doctor(args) -> int:
     print("[VoiceOS] OPENAI_API_KEY:", "set" if os.getenv("OPENAI_API_KEY") else "NOT SET")
     print("[VoiceOS] DSH_HOME:", os.getenv("DSH_HOME", str(Path.home() / ".ultron-dsh")))
     print("[VoiceOS] Proxy:", "configured" if os.getenv("HTTPS_PROXY") else "none")
-    for name in ("openai", "sounddevice", "deepseek_harness"):
+    for name in ("openai", "numpy", "sounddevice", "deepseek_harness"):
         try:
             __import__(name)
             print(f"[VoiceOS] {name}: installed")
@@ -240,7 +242,10 @@ def main(argv=None) -> int:
     except Exception as exc:
         # Never print credential values or full model request objects.
         print("[VoiceOS] Error:", safe_diagnostic(exc), file=sys.stderr)
-        print("[VoiceOS] If initialization failed, confirm the SDK profile actually registers the OpenAI provider/model. Web profile settings do not imply SDK profile compatibility.", file=sys.stderr)
+        if "JsonRpcError" in type(exc).__name__:
+            print("[VoiceOS] Check SDK provider/profile/model registration and permissions.", file=sys.stderr)
+        elif isinstance(exc, RuntimeError) and "Microphone" in str(exc):
+            print("[VoiceOS] Recording failed before transcription; check installed audio dependencies first.", file=sys.stderr)
         return 1
     return 0
 
