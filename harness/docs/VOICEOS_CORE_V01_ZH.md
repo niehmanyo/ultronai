@@ -280,3 +280,30 @@ python voiceos/core.py --hands-free --tts openai --persona sovereign
 ### 不等同于 OpenAI Prompt-to-Voice 的永久自定义声纹
 
 OpenAI Speech API 的 gpt-4o-mini-tts 已公布于 2027-01-06 停止支持，因此这里只作为试听/临时过渡。若决定打造永久 Voice ID，可使用官方 POST /v1/audio/voices Prompt-to-Voice 生成，**但文字提示生成的 Voice ID 仅适用于 GPT-Live，不能传给现有 /v1/audio/speech**。后续需要用 GPT-Live 语音前端对接 DSH Agent 的任务执行。
+
+## 14. ULTRON 机械音色 V0.2（保留原声，增加电子质感）
+
+新增纯本地 NumPy 后处理模块 `voiceos/robotic_fx.py`：轻微 83Hz 侧带调制与 9ms/17ms 微延时共振，同时保留主要干声，避免夸张的机器人失真。参数 `--robotic` 取值 0～100，默认 25；0 为无损直通。仅作用于 `--tts openai` 的合成 WAV，不影响 macOS say。
+
+### 试听以前生成的声音，免费比较机械感
+
+```bash
+cd ~/Downloads/ultron-web
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-prime-zh.wav --robotic 20 --play
+python voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-prime-zh.wav --robotic 45 --play
+python voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-prime-zh.wav --robotic 70 --play
+```
+
+如之前没有生成过该 WAV，可先执行一次 `python voiceos/preview_voices.py --persona prime --language zh --robotic 45 --play`，此操作会产生一次 OpenAI Speech API 计费请求；以后从保存的 WAV 本地试听不同强度不产生新 API 费用。
+
+### 正式启动 VoiceOS
+
+```bash
+python voiceos/core.py --hands-free --tts openai --persona prime --robotic 45
+```
+
+建议从 25（微弱）/45（均衡）/70（更显著）对比，用户听感为准。此为原创 AI 音效，不是 JARVIS 的演员原声，不引入音色克隆；不会改善真实流式延迟，也仍暂不支持 `--barge-in` 与 OpenAI TTS 同用。
