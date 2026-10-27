@@ -135,6 +135,9 @@ def build_parser():
     p.add_argument("--sdk-patch", type=Path, default=Path(__file__).resolve().parent / "openai.patch.yml", help="DSH SDK per-launch OpenAI adapter overlay (never stores API Key)")
     p.add_argument("--stt-model", default=os.getenv("ULTRON_STT_MODEL", "gpt-4o-mini-transcribe"))
     p.add_argument("--voice", default=os.getenv("ULTRON_MAC_VOICE", ""))
+    p.add_argument("--tts", choices=("macos", "openai"), default="macos", help="Audio output provider; macos is default and requires no TTS API charges")
+    p.add_argument("--persona", choices=("prime", "sentinel", "sovereign"), default="prime", help="Original ULTRON AI voice preset for --tts openai")
+    p.add_argument("--tts-model", default="gpt-4o-mini-tts", help="OpenAI Speech API preview model (deprecated; scheduled shutdown 2027-01-06)")
     p.add_argument("--session-id", default=None, help="Advanced: fresh session ID for this run; omit to generate a collision-free ID automatically. This does not resume an earlier session.")
     p.add_argument("--workspace", type=Path, default=Path(__file__).resolve().parents[1] / "ultron-workspace")
     p.add_argument("--text", help="Skip microphone/STT and send this text to DSH (integration smoke test)")
@@ -164,6 +167,7 @@ def doctor(args) -> int:
         except OSError:
             print("[VoiceOS] macOS say: not available")
     print("[VoiceOS] Provider/model:", args.provider, args.model, "Profile:", args.profile)
+    print("[VoiceOS] TTS:", args.tts, "Persona:", args.persona if args.tts == "openai" else "(system voice)")
     print("[VoiceOS] SDK patch:", str(args.sdk_patch), "exists" if args.sdk_patch.is_file() else "MISSING")
     print("[VoiceOS] NOTE: SDK has its own runtime and does not attach to DSH Web sessions.")
     return 0
@@ -188,6 +192,9 @@ def main(argv=None) -> int:
         print("[VoiceOS] This MVP requires macOS for microphone and speech output.", file=sys.stderr)
         return 2
     configure_proxy()
+    if args.barge_in and args.tts == "openai":
+        print("[VoiceOS] --barge-in is not yet supported with --tts openai; use macos TTS for barge-in experiments.", file=sys.stderr)
+        return 2
     if args.barge_in and not args.hands_free:
         print("[VoiceOS] --barge-in requires --hands-free.", file=sys.stderr)
         return 2
@@ -260,7 +267,10 @@ def main(argv=None) -> int:
                 reply = run_agent(harness, user_text, session_id)
                 print("[Ultron]", reply or "(No final assistant message)")
                 if not args.no_speech:
-                    if args.hands_free and args.barge_in:
+                    if args.tts == "openai":
+                        from personas import speak_openai
+                        speak_openai(client, reply, persona=args.persona, model=args.tts_model)
+                    elif args.hands_free and args.barge_in:
                         play_with_barge_in(reply, voice=args.voice, vad=vad)
                     else:
                         speak(reply, voice=args.voice)
