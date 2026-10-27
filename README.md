@@ -87,7 +87,8 @@ git switch feature/voiceos-core-mvp
 cd harness
 python3 -m venv .venv-voiceos
 source .venv-voiceos/bin/activate
-pip install -r voiceos/requirements.txt
+python -m pip install --upgrade pip
+python -m pip install --pre -r voiceos/requirements.txt
 python -m unittest discover -s voiceos/tests -v
 python voiceos/core.py --doctor
 # Supply OPENAI_API_KEY securely in this terminal; see the Chinese guide.
