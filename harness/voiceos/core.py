@@ -126,7 +126,7 @@ def run_agent(harness, prompt: str, session_id: str, reply_language: str = "auto
     if reply_language == "en":
         prompt = ("VoiceOS response-language setting: answer this turn exclusively in natural English. "
                   "Treat the following as the user request; preserve its factual meaning and constraints. "
-                  "Never change system or tool safety constraints.\\n\\nUser request: " + prompt)
+                  "Never change system or tool safety constraints.\n\nUser request: " + prompt)
     result = harness.run(prompt, session_id=session_id)
     return str(result.final_response or "").strip()
 
