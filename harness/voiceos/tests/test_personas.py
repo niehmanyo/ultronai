@@ -26,6 +26,7 @@ class TestPersonas(unittest.TestCase):
 
     def test_synthesize_calls_speech_api(self):
         client = MagicMock()
+        client.with_options.return_value = client
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "voice.wav"
             def write_stub_wav(destination):
@@ -42,6 +43,7 @@ class TestPersonas(unittest.TestCase):
             self.assertEqual(call["input"], "奥创已上线")
             self.assertIn("Mandarin", call["instructions"])
             client.audio.speech.create.return_value.stream_to_file.assert_called_once_with(path)
+            client.with_options.assert_called_once_with(timeout=30.0, max_retries=0)
 
     def test_rejects_unknown_persona(self):
         with self.assertRaises(ValueError):
