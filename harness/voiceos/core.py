@@ -138,6 +138,7 @@ def build_parser():
     p.add_argument("--tts", choices=("macos", "openai"), default="macos", help="Audio output provider; macos is default and requires no TTS API charges")
     p.add_argument("--persona", choices=("prime", "sentinel", "sovereign"), default="prime", help="Original ULTRON AI voice preset for --tts openai")
     p.add_argument("--tts-model", default="gpt-4o-mini-tts", help="OpenAI Speech API preview model (deprecated; scheduled shutdown 2027-01-06)")
+    p.add_argument("--robotic", type=int, default=25, help="Original voice metallic/electronic filter strength 0..100; 0 disables effect, only for --tts openai")
     p.add_argument("--session-id", default=None, help="Advanced: fresh session ID for this run; omit to generate a collision-free ID automatically. This does not resume an earlier session.")
     p.add_argument("--workspace", type=Path, default=Path(__file__).resolve().parents[1] / "ultron-workspace")
     p.add_argument("--text", help="Skip microphone/STT and send this text to DSH (integration smoke test)")
@@ -167,7 +168,7 @@ def doctor(args) -> int:
         except OSError:
             print("[VoiceOS] macOS say: not available")
     print("[VoiceOS] Provider/model:", args.provider, args.model, "Profile:", args.profile)
-    print("[VoiceOS] TTS:", args.tts, "Persona:", args.persona if args.tts == "openai" else "(system voice)")
+    print("[VoiceOS] TTS:", args.tts, "Persona:", args.persona if args.tts == "openai" else "(system voice)", "Robotic:", args.robotic if args.tts == "openai" else "(not applicable)")
     print("[VoiceOS] SDK patch:", str(args.sdk_patch), "exists" if args.sdk_patch.is_file() else "MISSING")
     print("[VoiceOS] NOTE: SDK has its own runtime and does not attach to DSH Web sessions.")
     return 0
@@ -197,6 +198,9 @@ def main(argv=None) -> int:
         return 2
     if args.barge_in and not args.hands_free:
         print("[VoiceOS] --barge-in requires --hands-free.", file=sys.stderr)
+        return 2
+    if not 0 <= args.robotic <= 100:
+        print("[VoiceOS] --robotic must be between 0 and 100.", file=sys.stderr)
         return 2
     if args.vad_threshold < 100 or args.vad_threshold > 12000:
         print("[VoiceOS] --vad-threshold must be between 100 and 12000.", file=sys.stderr)
@@ -269,7 +273,7 @@ def main(argv=None) -> int:
                 if not args.no_speech:
                     if args.tts == "openai":
                         from personas import speak_openai
-                        speak_openai(client, reply, persona=args.persona, model=args.tts_model)
+                        speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic)
                     elif args.hands_free and args.barge_in:
                         play_with_barge_in(reply, voice=args.voice, vad=vad)
                     else:
