@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import subprocess
 import tempfile
+import wave
 from pathlib import Path
 
 PERSONAS = {
@@ -85,6 +86,7 @@ def synthesize(client, text: str, target: Path, *, persona="prime",
     if len(text) > 4000:
         raise ValueError("TTS input too long; split the reply into shorter chunks")
     p = PERSONAS[persona]
+    print(f"[VoiceOS] TTS request: model={model}, persona={persona}, characters={len(text)}", flush=True)
     response = client.audio.speech.create(
         model=model,
         voice=p["voice"],
@@ -92,18 +94,29 @@ def synthesize(client, text: str, target: Path, *, persona="prime",
         instructions=p["instructions"],
         response_format="wav",
     )
+    print("[VoiceOS] TTS response received; saving WAV...", flush=True)
     response.stream_to_file(target)
+    if not target.is_file() or target.stat().st_size < 100:
+        raise RuntimeError("TTS returned an empty/invalid WAV file")
+    with wave.open(str(target), "rb") as audio:
+        if audio.getnframes() < 100 or audio.getframerate() < 8000:
+            raise RuntimeError("TTS WAV has no playable audio frames")
+        seconds = audio.getnframes() / audio.getframerate()
+    print(f"[VoiceOS] TTS WAV ready: {seconds:.1f}s, {target.stat().st_size} bytes", flush=True)
     return target
 
 
 def play_wav(path: Path):
     """Block while playing WAV via macOS built-in player."""
-    subprocess.run(["afplay", str(path)], check=True)
+    print(f"[VoiceOS] Playing audio: {path}", flush=True)
+    subprocess.run(["afplay", str(path)], check=True, timeout=120)
+    print("[VoiceOS] Audio playback finished.", flush=True)
 
 
 def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts", robotic=25):
     if not text.strip():
         return True
+    print("[VoiceOS] Preparing AI speech synthesis...", flush=True)
     with tempfile.TemporaryDirectory(prefix="ultron-tts-") as temp:
         output = Path(temp) / "reply.wav"
         synthesize(client, text, output, persona=persona, model=model)
@@ -112,5 +125,6 @@ def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts",
             from robotic_fx import process_robotic
             playback = process_robotic(output, Path(temp) / "robotic.wav", strength=robotic)
         print(f"[VoiceOS] Speaking with ULTRON {persona.upper()} (AI-generated voice, robotic={robotic}).")
+        print("[VoiceOS] Audio effects ready; starting player.", flush=True)
         play_wav(playback)
     return True
