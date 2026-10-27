@@ -415,3 +415,26 @@ python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-la
 - 停在 `Playing audio`：检查输出音量与系统设备；播放器有超时。
 
 请只提供卡住时最后 5～10 行终端日志，不要包含 OPENAI_API_KEY。
+
+## 18. GLACIAL 英文 TTS 停在 request 阶段的专用修复
+
+如果日志停在 `TTS request: model=gpt-4o-mini-tts`，说明请求尚未完成，跟麦克风、机械 DSP 和 macOS 扬声器都无关。由于之前共用 OpenAI client 的 90 秒超时和一次重试，失败可能拖得较久。新代码对 Speech 请求独立设定 `timeout=30`、`max_retries=0`，超时后应返回具体异常类型（如 APITimeoutError），避免无反馈重试。仍不能保证远端 API 一定可用。
+
+```bash
+cd ~/Downloads/ultron-web
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python -u voiceos/preview_voices.py --persona glacial --language en --robotic 55 --play
+```
+
+试听程序默认复用已存在的 `voiceos/voice-previews/ultron-glacial-en.wav`，重复播放和机械化不产生新 TTS 请求。只有该 WAV 不存在时才请求 Speech API。明确希望覆盖并付费重新生成时加 `--force`。
+
+如果仍无法访问，请复制异常类型（例如 APITimeoutError/RateLimitError/BadRequestError）以及脱敏后的少量日志。不要粘贴 API Key。可以尝试已有的本地英文 WAV：
+
+```bash
+python -u voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-sovereign-en.wav --robotic 55 --play
+```
+
+注意只有原始文件确实存在才能离线处理；网络失败不会自动生成缓存。
