@@ -370,3 +370,48 @@ python voiceos/core.py --hands-free --tts openai --persona glacial --reply-langu
 `--reply-language en` 在 DSH 提问前加入响应语言指令，属于 best-effort，不能视为绝对保障；`--reply-language auto`（默认）保留原多语言行为。中文用户问题仍按中文转写，仅 Agent 回答尽量使用英文，并由 TTS 英文播报。先语音问一个中文问题，检查终端 `[Ultron]` 是否为英文。
 
 如果听感机械效果太重导致英语辅音辨识度下降，降低 `--robotic` 至 35–45。原 `prime`、`sentinel` 预设不受影响。当前 OpenAI TTS 仍不支持本项目的 `--barge-in`；这里也不是电影 Jarvis 的原声。
+
+## 17. 英文 GLACIAL 模式卡住/无声诊断
+
+新版本在监听麦克风时每约 8 秒显示 peak RMS 和阈值；TTS 输出分阶段进度并验证 WAV 是否含音频，播放器使用 120 秒超时。不要反复重装依赖或提交 API Key。
+
+```bash
+cd ~/Downloads/ultron-web
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+```
+
+### 确认 Mac 本地播放器独立工作（无网络请求）
+
+```bash
+say -v Daniel 'Systems online.'
+```
+
+### 只测英文声音合成（1 次付费 TTS 请求）
+
+```bash
+python -u voiceos/preview_voices.py --persona glacial --language en --robotic 0 --play
+```
+
+如果已经有 `voiceos/voice-previews/ultron-glacial-en.wav`，更推荐先本地测试不付费的方式：
+
+```bash
+python -u voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-glacial-en.wav --robotic 55 --play
+```
+
+### 再测试完整语音 Agent
+
+```bash
+python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55 --vad-threshold 350
+```
+
+诊断表：
+- 停在 `Listening automatically`：观察每 8 秒打印的 peak RMS，若总低于 threshold，调小 `--vad-threshold` 或检查麦克风。
+- 停在 `Agent processing`：问题在 DSH 模型回复/工具，而不是 TTS。
+- 停在 `TTS request`：网络、OpenAI TTS API 或响应延迟；既有 OpenAI 代理需要保持工作。
+- 停在 `TTS WAV ready` 后但无声：检测 macOS 输出设备，以及 WAV/DSP/`afplay`。
+- 停在 `Playing audio`：检查输出音量与系统设备；播放器有超时。
+
+请只提供卡住时最后 5～10 行终端日志，不要包含 OPENAI_API_KEY。
