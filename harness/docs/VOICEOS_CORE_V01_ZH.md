@@ -125,3 +125,31 @@ python voiceos/core.py --text '你好，请用一句中文介绍自己' --no-spe
 **关键区别**：`deepseek_harness` SDK 的 `sdk` profile 默认不保证装载 DSH Web 的 `openai` provider。单独 `export OPENAI_API_KEY` 并不等于 `sdk` 配置了 OpenAI 模型适配器。若错误证实是 adapter/provider 缺失，需要在 SDK profile 中显式注册 OpenAI adapter，而不是重复更换密钥。该适配将基于当前安装的 SDK release profile schema 修复。
 
 此外，`read -s 'VAR?prompt'` 是 zsh 专用语法，bash 应使用 `read -r -s -p 'OpenAI API Key: ' OPENAI_API_KEY`，随后 `echo; export OPENAI_API_KEY`。如果 doctor 已显示 Key `set`，不要再次输入。
+
+## 9. 修复 `no adapter registered for provider "openai"`
+
+确认拉取修复后的分支：
+
+```bash
+cd ~/Downloads/ultron-web
+git switch feature/voiceos-core-mvp
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+python voiceos/core.py --doctor
+python -m unittest discover -s voiceos/tests -v
+python voiceos/core.py --text '你好 Ultron，请用中文介绍自己' --no-speech
+```
+
+这次修复新增 `voiceos/openai.patch.yml`：
+
+```yaml
+- id: llm-pi-ai
+  config:
+    providers:
+      openai:
+        apiKeyEnv: OPENAI_API_KEY
+```
+
+`core.py` 将这个只含**公开配置**的文件通过 `DeepSeekHarness(patches=(...))` 传入 SDK。官方完整 `sdk` profile 挂载 `llm-pi-ai`，补丁为其声明 `openai` 模型路由；通过进程环境使用已经设置的 API Key。没有修改 `$DSH_HOME/profiles/web/` 或浏览器里已生效的 OpenAI 设置。
+
+若报 `UNKNOWN_MODEL`，换用当前 SDK 目录确实支持的 OpenAI 模型；若报 `MISSING_CREDENTIAL`，检查当前进程 `OPENAI_API_KEY` 是否已 export；若成功看到 `[Ultron]` 回复，继续运行 `python voiceos/core.py` 验收录音。
