@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 import wave
+import uuid
 from pathlib import Path
 
 
@@ -134,7 +135,7 @@ def build_parser():
     p.add_argument("--sdk-patch", type=Path, default=Path(__file__).resolve().parent / "openai.patch.yml", help="DSH SDK per-launch OpenAI adapter overlay (never stores API Key)")
     p.add_argument("--stt-model", default=os.getenv("ULTRON_STT_MODEL", "gpt-4o-mini-transcribe"))
     p.add_argument("--voice", default=os.getenv("ULTRON_MAC_VOICE", ""))
-    p.add_argument("--session-id", default="ultron-voiceos-mvp")
+    p.add_argument("--session-id", default=None, help="Advanced: fresh session ID for this run; omit to generate a collision-free ID automatically. This does not resume an earlier session.")
     p.add_argument("--workspace", type=Path, default=Path(__file__).resolve().parents[1] / "ultron-workspace")
     p.add_argument("--text", help="Skip microphone/STT and send this text to DSH (integration smoke test)")
     p.add_argument("--no-speech", action="store_true", help="Disable macOS TTS playback")
@@ -209,6 +210,8 @@ def main(argv=None) -> int:
     if not sdk_patch.is_file():
         print(f"[VoiceOS] SDK model adapter patch does not exist: {sdk_patch}", file=sys.stderr)
         return 2
+    session_id = args.session_id or f"ultron-voice-{uuid.uuid4().hex}"
+    print(f"[VoiceOS] Session: {session_id} (same for all turns in this launch)")
     print("[VoiceOS] Starting DSH SDK runtime with OpenAI provider overlay; Web UI session is not shared.")
     try:
         with DeepSeekHarness(
@@ -234,7 +237,7 @@ def main(argv=None) -> int:
                     continue
                 print("[You]", user_text)
                 print("[VoiceOS] Agent processing...")
-                reply = run_agent(harness, user_text, args.session_id)
+                reply = run_agent(harness, user_text, session_id)
                 print("[Ultron]", reply or "(No final assistant message)")
                 speak(reply, voice=args.voice, enabled=not args.no_speech)
     except KeyboardInterrupt:
@@ -243,7 +246,10 @@ def main(argv=None) -> int:
         # Never print credential values or full model request objects.
         print("[VoiceOS] Error:", safe_diagnostic(exc), file=sys.stderr)
         if "JsonRpcError" in type(exc).__name__:
-            print("[VoiceOS] Check SDK provider/profile/model registration and permissions.", file=sys.stderr)
+            if "already exists" in str(exc) or "id collision" in str(exc):
+                print("[VoiceOS] Session ID exists from an earlier launch. Restart without --session-id to generate a fresh ID; this SDK version cannot resume it with run().", file=sys.stderr)
+            else:
+                print("[VoiceOS] Check SDK provider/profile/model registration and permissions.", file=sys.stderr)
         elif isinstance(exc, RuntimeError) and "Microphone" in str(exc):
             print("[VoiceOS] Recording failed before transcription; check installed audio dependencies first.", file=sys.stderr)
         return 1
