@@ -307,3 +307,31 @@ python voiceos/core.py --hands-free --tts openai --persona prime --robotic 45
 ```
 
 建议从 25（微弱）/45（均衡）/70（更显著）对比，用户听感为准。此为原创 AI 音效，不是 JARVIS 的演员原声，不引入音色克隆；不会改善真实流式延迟，也仍暂不支持 `--barge-in` 与 OpenAI TTS 同用。
+
+## 15. 机械感明显增强版（响应试听反馈）
+
+V0.2 的早期版本使用轻微调制和共振，实际效果不够明显。新版将处理层改为两组载波（92Hz/147Hz）环形调制、非线性谐波增强和短延迟共振，并真正提高 wet/dry 混合比例。这是原创电子合成声效果，不是电影 JARVIS 的声音复制，也不等于真正的多频带声码器。
+
+### 利用上一次保存的 WAV，完全离线且无 TTS 费用地比较
+
+```bash
+cd ~/Downloads/ultron-web
+git switch feature/voiceos-core-mvp
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-prime-zh.wav --robotic 0 --play
+python voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-prime-zh.wav --robotic 45 --play
+python voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-prime-zh.wav --robotic 80 --play
+```
+
+将 Prime 换成你更喜欢的音色（如 sovereign）也可。输出存放 `voiceos/voice-previews/`，可在 Finder 中逐个对比。`--robotic 0` 为原文件字节级复制。注意高于 70 的效果可能牺牲可懂度，优先尝试 45。
+
+### 语音对话直接使用新版
+
+```bash
+python voiceos/core.py --hands-free --tts openai --persona prime --robotic 65
+```
+
+当前 `--barge-in` 仍仅支持 macOS TTS；OpenAI TTS 音效整段处理后才播报，不是实时流式。新版尚待用户的 Mac 音色主观试听验收。
