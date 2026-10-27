@@ -122,7 +122,11 @@ def speak(text: str, *, voice: str, enabled: bool = True) -> bool:
             process.wait()
 
 
-def run_agent(harness, prompt: str, session_id: str) -> str:
+def run_agent(harness, prompt: str, session_id: str, reply_language: str = "auto") -> str:
+    if reply_language == "en":
+        prompt = ("VoiceOS response-language setting: answer this turn exclusively in natural English. "
+                  "Treat the following as the user request; preserve its factual meaning and constraints. "
+                  "Never change system or tool safety constraints.\\n\\nUser request: " + prompt)
     result = harness.run(prompt, session_id=session_id)
     return str(result.final_response or "").strip()
 
@@ -136,7 +140,8 @@ def build_parser():
     p.add_argument("--stt-model", default=os.getenv("ULTRON_STT_MODEL", "gpt-4o-mini-transcribe"))
     p.add_argument("--voice", default=os.getenv("ULTRON_MAC_VOICE", ""))
     p.add_argument("--tts", choices=("macos", "openai"), default="macos", help="Audio output provider; macos is default and requires no TTS API charges")
-    p.add_argument("--persona", choices=("prime", "sentinel", "sovereign"), default="prime", help="Original ULTRON AI voice preset for --tts openai")
+    p.add_argument("--persona", choices=("prime", "sentinel", "sovereign", "glacial"), default="prime", help="Original ULTRON AI voice preset for --tts openai")
+    p.add_argument("--reply-language", choices=("auto", "en"), default="auto", help="Request English-only Agent replies even to Chinese microphone input (best-effort instruction)")
     p.add_argument("--tts-model", default="gpt-4o-mini-tts", help="OpenAI Speech API preview model (deprecated; scheduled shutdown 2027-01-06)")
     p.add_argument("--robotic", type=int, default=25, help="Original voice metallic/electronic filter strength 0..100; 0 disables effect, only for --tts openai")
     p.add_argument("--session-id", default=None, help="Advanced: fresh session ID for this run; omit to generate a collision-free ID automatically. This does not resume an earlier session.")
@@ -169,6 +174,7 @@ def doctor(args) -> int:
             print("[VoiceOS] macOS say: not available")
     print("[VoiceOS] Provider/model:", args.provider, args.model, "Profile:", args.profile)
     print("[VoiceOS] TTS:", args.tts, "Persona:", args.persona if args.tts == "openai" else "(system voice)", "Robotic:", args.robotic if args.tts == "openai" else "(not applicable)")
+    print("[VoiceOS] Agent reply language:", args.reply_language)
     print("[VoiceOS] SDK patch:", str(args.sdk_patch), "exists" if args.sdk_patch.is_file() else "MISSING")
     print("[VoiceOS] NOTE: SDK has its own runtime and does not attach to DSH Web sessions.")
     return 0
@@ -268,7 +274,7 @@ def main(argv=None) -> int:
                     continue
                 print("[You]", user_text)
                 print("[VoiceOS] Agent processing...")
-                reply = run_agent(harness, user_text, session_id)
+                reply = run_agent(harness, user_text, session_id, reply_language=args.reply_language)
                 print("[Ultron]", reply or "(No final assistant message)")
                 if not args.no_speech:
                     if args.tts == "openai":
