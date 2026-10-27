@@ -45,6 +45,17 @@ class TestVoiceOS(unittest.TestCase):
         self.assertEqual(core.run_agent(agent, "你好", "session-1"), "你好！")
         agent.run.assert_called_once_with("你好", session_id="session-1")
 
+    def test_english_reply_mode(self):
+        agent = MagicMock()
+        agent.run.return_value.final_response = "Systems operational."
+        self.assertEqual(core.run_agent(agent, "你好", "session-1", reply_language="en"), "Systems operational.")
+        prompt = agent.run.call_args.args[0]
+        self.assertIn("exclusively in natural English", prompt)
+        self.assertIn("User request: 你好", prompt)
+        args = core.build_parser().parse_args(["--persona", "glacial", "--reply-language", "en"])
+        self.assertEqual(args.persona, "glacial")
+        self.assertEqual(args.reply_language, "en")
+
     def test_transcribe_uses_audio_file(self):
         client = MagicMock()
         client.audio.transcriptions.create.return_value.text = "  你好 Ultron  "
