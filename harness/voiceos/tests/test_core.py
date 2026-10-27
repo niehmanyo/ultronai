@@ -19,7 +19,15 @@ class TestVoiceOS(unittest.TestCase):
             args = core.build_parser().parse_args([])
         self.assertEqual(args.provider, "openai")
         self.assertEqual(args.profile, "sdk")
+        self.assertEqual(args.sdk_patch.name, "openai.patch.yml")
+        self.assertTrue(args.sdk_patch.is_file())
         self.assertEqual(args.stt_model, "gpt-4o-mini-transcribe")
+
+    def test_patch_references_env_not_secret(self):
+        text = (MODULE.parent / "openai.patch.yml").read_text()
+        self.assertIn("apiKeyEnv: OPENAI_API_KEY", text)
+        self.assertIn("id: llm-pi-ai", text)
+        self.assertNotIn("sk-proj-", text)
 
     def test_agent_response(self):
         agent = MagicMock()
