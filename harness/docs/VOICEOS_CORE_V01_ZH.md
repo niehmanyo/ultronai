@@ -335,3 +335,38 @@ python voiceos/core.py --hands-free --tts openai --persona prime --robotic 65
 ```
 
 当前 `--barge-in` 仍仅支持 macOS TTS；OpenAI TTS 音效整段处理后才播报，不是实时流式。新版尚待用户的 Mac 音色主观试听验收。
+
+## 16. ULTRON 冷酷英文声线：GLACIAL
+
+根据用户反馈，上一版 `prime` 音色太柔和；本版保留温和原预设，新增 `glacial` 原创冷酷英文语音风格，重新设计 `sovereign` 为严肃、坚定、不带亲切语调的指挥型语气。仍采用可授权 OpenAI 内置语音 + 语气指令 + 本地原创机械特效，不使用 Marvel 演员克隆。
+
+### 英文优先试听（推荐先测试 glacial，不必一次生成全部音色）
+
+```bash
+cd ~/Downloads/ultron-web
+git switch feature/voiceos-core-mvp
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python voiceos/preview_voices.py --persona glacial --language en --robotic 55 --play
+python voiceos/preview_voices.py --persona sovereign --language en --robotic 55 --play
+```
+
+英文样本：Ultron online. Core systems synchronized. Threat assessment complete. Authorization confirmed. State your objective. I will execute with precision.
+
+每条无 `--from-wav` 的试听会调用付费 OpenAI TTS 一次；基础 WAV 生成后可不花新 TTS 费用调整机械效果：
+
+```bash
+python voiceos/preview_voices.py --from-wav voiceos/voice-previews/ultron-glacial-en.wav --robotic 75 --play
+```
+
+### 和 Ultron 对话：中文提问也要求用英文回复
+
+```bash
+python voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55
+```
+
+`--reply-language en` 在 DSH 提问前加入响应语言指令，属于 best-effort，不能视为绝对保障；`--reply-language auto`（默认）保留原多语言行为。中文用户问题仍按中文转写，仅 Agent 回答尽量使用英文，并由 TTS 英文播报。先语音问一个中文问题，检查终端 `[Ultron]` 是否为英文。
+
+如果听感机械效果太重导致英语辅音辨识度下降，降低 `--robotic` 至 35–45。原 `prime`、`sentinel` 预设不受影响。当前 OpenAI TTS 仍不支持本项目的 `--barge-in`；这里也不是电影 Jarvis 的原声。
