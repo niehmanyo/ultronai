@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import wave
 from unittest.mock import MagicMock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +28,13 @@ class TestPersonas(unittest.TestCase):
         client = MagicMock()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "voice.wav"
+            def write_stub_wav(destination):
+                with wave.open(str(destination), "wb") as output:
+                    output.setnchannels(1)
+                    output.setsampwidth(2)
+                    output.setframerate(24000)
+                    output.writeframes(b"\x00\x00" * 240)
+            client.audio.speech.create.return_value.stream_to_file.side_effect = write_stub_wav
             personas.synthesize(client, "奥创已上线", path, persona="prime")
             call = client.audio.speech.create.call_args.kwargs
             self.assertEqual(call["voice"], "onyx")
