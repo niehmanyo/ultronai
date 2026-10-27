@@ -94,7 +94,7 @@ def speak(text: str, *, voice: str, enabled: bool = True) -> bool:
     """Return True if spoken completely; False if the user interrupted."""
     if not enabled or not text.strip():
         return True
-    process = subprocess.Popen(["say", "-v", voice, text], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    process = subprocess.Popen(["say", *(["-v", voice] if voice else []), text], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     print("[VoiceOS] Speaking. Press Enter to interrupt playback.")
     try:
         while process.poll() is None:
@@ -129,7 +129,7 @@ def build_parser():
     p.add_argument("--provider", default=os.getenv("ULTRON_VOICE_PROVIDER", "openai"))
     p.add_argument("--profile", default=os.getenv("ULTRON_VOICE_PROFILE", "sdk"))
     p.add_argument("--stt-model", default=os.getenv("ULTRON_STT_MODEL", "gpt-4o-mini-transcribe"))
-    p.add_argument("--voice", default=os.getenv("ULTRON_MAC_VOICE", "Tingting"))
+    p.add_argument("--voice", default=os.getenv("ULTRON_MAC_VOICE", ""))
     p.add_argument("--session-id", default="ultron-voiceos-mvp")
     p.add_argument("--workspace", type=Path, default=Path(__file__).resolve().parents[1] / "ultron-workspace")
     p.add_argument("--text", help="Skip microphone/STT and send this text to DSH (integration smoke test)")
@@ -219,7 +219,7 @@ def main(argv=None) -> int:
         print("\n[VoiceOS] Interrupted.")
     except Exception as exc:
         # Never print credential values or full model request objects.
-        print(f"[VoiceOS] Error: {type(exc).__name__}: {str(exc)[:350]}", file=sys.stderr)
+        print(f"[VoiceOS] Error: {type(exc).__name__}. Check your DSH profile, model credentials, permissions and network; sensitive details are intentionally omitted.", file=sys.stderr)
         return 1
     return 0
 
