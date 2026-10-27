@@ -168,3 +168,22 @@ python voiceos/core.py
 ```
 
 期待 doctor 输出 `numpy: installed`。文本 Agent 已经能返回正常回答，不需要重新生成 API Key，也不需要调整代理或 SDK Provider。按 Enter 录音、再按 Enter 停止，随后检查 `[You]` 识别内容和 `[Ultron]` 回复。如果出现录音设备或系统授权错误，请单独处理 macOS 麦克风权限。
+
+## 11. 修复 `session "ultron-voiceos-mvp" already exists`
+
+之前脚本固定复用 `ultron-voiceos-mvp` Session ID，重启后 SDK 会尝试创建一个已持久化的 Session，报 `already exists`。新版默认每次**启动**生成唯一的 `ultron-voice-<uuid>`，并在同一进程的所有语音轮次复用这个 ID。既不删除原 Session，也不影响 DSH Web。
+
+```bash
+cd ~/Downloads/ultron-web
+git switch feature/voiceos-core-mvp
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+python -m unittest discover -s voiceos/tests -v
+python voiceos/core.py
+```
+
+日志会显示本次的 `[VoiceOS] Session: ultron-voice-...`。在同一个程序里连续两轮，分别说“我叫测试员小蓝，请记住这一轮”和“我刚才说我叫什么？”，观察 SDK 会话上下文。这个测试只需要短期 Session 上下文，不需要把名字保存到长期记忆。
+
+`--session-id` 现在是**可选高级参数**，如自行指定已经持久化的旧 ID 仍可能冲突。**当前版本没有自动恢复跨进程的 SDK Session**；后续需要验证 `resume_session` 及已安装 SDK release 的支持情况，而不是清空已有 Session 数据。
+
+你的前一次测试已确认麦克风录音及 ASR 正常，且 SDK 能返回真实中文回答，因此无需重装依赖或更换 API Key。
