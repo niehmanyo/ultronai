@@ -44,6 +44,22 @@ class TestRoboticAudio(unittest.TestCase):
                     self.assertEqual(result.getframerate(), 24000)
                     self.assertEqual(result.getnframes(), 8000)
 
+    def test_higher_strength_is_more_audibly_different(self):
+        with tempfile.TemporaryDirectory() as d:
+            src = Path(d) / "original.wav"
+            self.make_wav(src)
+            outputs = []
+            for level in (20, 45, 80):
+                target = Path(d) / f"level-{level}.wav"
+                fx.process_robotic(src, target, strength=level)
+                with wave.open(str(target), "rb") as wav:
+                    outputs.append(np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2").astype(np.float32))
+            with wave.open(str(src), "rb") as wav:
+                original = np.frombuffer(wav.readframes(wav.getnframes()), dtype="<i2").astype(np.float32)
+            errors = [float(np.mean((item - original) ** 2)) for item in outputs]
+            self.assertLess(errors[0], errors[1])
+            self.assertLess(errors[1], errors[2])
+
     def test_invalid_parameters(self):
         with tempfile.TemporaryDirectory() as d:
             src, dst = Path(d) / "orig.wav", Path(d) / "fx.wav"
