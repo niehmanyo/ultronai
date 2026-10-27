@@ -87,13 +87,20 @@ def synthesize(client, text: str, target: Path, *, persona="prime",
         raise ValueError("TTS input too long; split the reply into shorter chunks")
     p = PERSONAS[persona]
     print(f"[VoiceOS] TTS request: model={model}, persona={persona}, characters={len(text)}", flush=True)
-    response = client.audio.speech.create(
+    # Bound synthesis separately from STT/agent calls; disable hidden retries.
+    speech_api = client.with_options(timeout=30.0, max_retries=0).audio.speech if hasattr(client, "with_options") else client.audio.speech
+    try:
+        response = speech_api.create(
         model=model,
         voice=p["voice"],
         input=text,
         instructions=p["instructions"],
         response_format="wav",
-    )
+        )
+    except Exception as exc:
+        # Avoid printing request headers, keys, or full response bodies.
+        print(f"[VoiceOS] TTS request failed: {type(exc).__name__}. Try checking OpenAI Speech endpoint access or model availability.", flush=True)
+        raise
     print("[VoiceOS] TTS response received; saving WAV...", flush=True)
     response.stream_to_file(target)
     if not target.is_file() or target.stat().st_size < 100:
