@@ -187,3 +187,59 @@ python voiceos/core.py
 `--session-id` 现在是**可选高级参数**，如自行指定已经持久化的旧 ID 仍可能冲突。**当前版本没有自动恢复跨进程的 SDK Session**；后续需要验证 `resume_session` 及已安装 SDK release 的支持情况，而不是清空已有 Session 数据。
 
 你的前一次测试已确认麦克风录音及 ASR 正常，且 SDK 能返回真实中文回答，因此无需重装依赖或更换 API Key。
+
+## 12. VoiceOS V0.1b：免按键语音对话与实验性打断
+
+本阶段基于已验收的 OpenAI ASR → DSH SDK → macOS `say` 增量扩展；**没有新的 Web UI，也不是全双工实时语音**。只在当前终端会话运行，退出后不会持续监听。
+
+### 更新和离线测试
+
+```bash
+cd ~/Downloads/ultron-web
+git switch feature/voiceos-core-mvp
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+```
+
+### 免按键模式（推荐先测）
+
+```bash
+python voiceos/core.py --hands-free
+```
+
+看到 `Listening automatically` 之后直接说话，停顿约 0.75 秒就自动结束录音、ASR 转写、Agent 回复和 `say` 播报。播报结束后自动进入下一轮监听，保持同一运行时的 Session 上下文。按 **Ctrl+C** 退出。系统不会自动开启录音权限；需要 macOS 当前终端已有麦克风授权。
+
+### 可选：在播报时说话来打断（实验性）
+
+**强烈建议戴耳机**，否则 Mac 外放可能被麦克风当成你的插话。
+
+```bash
+python voiceos/core.py --hands-free --barge-in
+```
+
+当 Ultron 正在朗读时，持续发声约 0.45 秒且音量足够大，可尝试停止 `say`。随后程序会显示 `Listening automatically`，请**重新完整说出**新请求。打断瞬间的音频不会自动形成完整提问，也不会取消正在执行的工具动作。
+
+### 噪声或声音太小
+
+```bash
+# 安静环境，较轻的声音可能需要降低阈值
+python voiceos/core.py --hands-free --vad-threshold 350
+# 噪声大、频繁误触发可增大阈值
+python voiceos/core.py --hands-free --vad-threshold 950
+```
+
+阈值取值限制 100–12000；这是固定 RMS 能量门限，不是神经网络语音活动检测。默认采样率 16kHz、分块 30ms、起音连续约 240ms、尾部静音约 750ms、最长单段约 35s。等待讲话最长 60s，超时后重新监听。
+
+### 验收要点
+
+1. 在 `--hands-free` 下连续进行两轮问题，不按回车，第二轮正确引用上一轮。
+2. 停顿后能自动触发转写，终端出现 `[You]` 和 `[Ultron]`。
+3. 在 `--barge-in` 与耳机环境下尝试插话，`say` 能结束；插话结束后重新提出完整请求。
+4. 测试两次 `Ctrl+C` 正常退出，终端无需强制杀进程。
+5. 保留原命令 `python voiceos/core.py`，验证按回车录音的兼容性。
+
+**明确的限制**：ASR 仍是整段音频发送；DSH `run()` 仍需等待整轮结束才返回最终文本；`say` 仍为整段播报。当前不存在逐 Token TTS/持续全双工音频，也没有声学回声消除。打断算法是实验性的，会受耳机、声量、噪声和麦克风增益影响。
+
+未经用户 Mac 实机测试，本次只能算代码已交付，不能宣称自然打断已通过验收。
