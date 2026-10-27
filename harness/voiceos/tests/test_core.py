@@ -19,6 +19,7 @@ class TestVoiceOS(unittest.TestCase):
             args = core.build_parser().parse_args([])
         self.assertEqual(args.provider, "openai")
         self.assertEqual(args.profile, "sdk")
+        self.assertIsNone(args.session_id)  # generated once per program start
         self.assertEqual(args.sdk_patch.name, "openai.patch.yml")
         self.assertTrue(args.sdk_patch.is_file())
         self.assertEqual(args.stt_model, "gpt-4o-mini-transcribe")
@@ -28,6 +29,9 @@ class TestVoiceOS(unittest.TestCase):
         self.assertIn("apiKeyEnv: OPENAI_API_KEY", text)
         self.assertIn("id: llm-pi-ai", text)
         self.assertNotIn("sk-proj-", text)
+
+    def test_explicit_session_id_is_opt_in(self):
+        self.assertEqual(core.build_parser().parse_args(["--session-id", "fresh-test"]).session_id, "fresh-test")
 
     def test_agent_response(self):
         agent = MagicMock()
