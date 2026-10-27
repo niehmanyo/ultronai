@@ -85,12 +85,16 @@ def play_wav(path: Path):
     subprocess.run(["afplay", str(path)], check=True)
 
 
-def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts"):
+def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts", robotic=25):
     if not text.strip():
         return True
     with tempfile.TemporaryDirectory(prefix="ultron-tts-") as temp:
         output = Path(temp) / "reply.wav"
         synthesize(client, text, output, persona=persona, model=model)
-        print(f"[VoiceOS] Speaking with ULTRON {persona.upper()} (AI-generated voice).")
-        play_wav(output)
+        playback = output
+        if robotic:
+            from robotic_fx import process_robotic
+            playback = process_robotic(output, Path(temp) / "robotic.wav", strength=robotic)
+        print(f"[VoiceOS] Speaking with ULTRON {persona.upper()} (AI-generated voice, robotic={robotic}).")
+        play_wav(playback)
     return True
