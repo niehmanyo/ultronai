@@ -71,7 +71,9 @@ def listen_utterance(path, vad: MicVAD, *, idle_timeout=60.0) -> bool:
     silence = 0
     active = False
     started = time.monotonic()
-    print("[VoiceOS] Listening automatically... (Ctrl+C to quit)")
+    last_hint = started
+    peak_rms = 0.0
+    print(f"[VoiceOS] Listening automatically (RMS threshold={vad.threshold}; Ctrl+C to quit)...", flush=True)
     with _open_stream(vad, samples):
         while True:
             if not active and time.monotonic() - started > idle_timeout:
@@ -81,8 +83,15 @@ def listen_utterance(path, vad: MicVAD, *, idle_timeout=60.0) -> bool:
                 block = samples.get(timeout=0.5)
             except queue.Empty:
                 continue
-            voiced = vad.loud(block)
+            rms = vad.rms(block)
+            voiced = rms >= vad.threshold
             if not active:
+                peak_rms = max(peak_rms, rms)
+                now = time.monotonic()
+                if now - last_hint >= 8:
+                    print(f"[VoiceOS] Waiting for speech: peak RMS={peak_rms:.0f}, threshold={vad.threshold}. Try --vad-threshold 300 if your mic is quiet.", flush=True)
+                    peak_rms = 0.0
+                    last_hint = now
                 before.append(block)
                 consecutive = consecutive + 1 if voiced else 0
                 if consecutive >= vad.min_speech_blocks:
