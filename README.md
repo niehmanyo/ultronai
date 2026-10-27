@@ -97,3 +97,18 @@ python voiceos/core.py
 \`\`\`
 
 Read the complete [VoiceOS Chinese setup and acceptance guide](harness/docs/VOICEOS_CORE_V01_ZH.md) before testing. Python SDK's \`sdk\` profile requires a compatible OpenAI provider registration; working DSH Web credentials do not by themselves establish SDK-provider compatibility. Do not switch the provider to DeepSeek or claim real-world integration is validated without local Mac testing. No PR or Render deployment is part of this feature branch.
+
+### VoiceOS V0.1b — hands-free voice (experimental)
+
+The same core now supports automatically segmented microphone turns and optional voice interruption during macOS TTS. Both are terminal-only and reuse the already working OpenAI ASR / DSH SDK / system `say` pipeline.
+
+```bash
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python voiceos/core.py --hands-free
+# Headphones strongly recommended for experimental voice interruption:
+python voiceos/core.py --hands-free --barge-in
+```
+
+The existing push-to-talk command `python voiceos/core.py` remains the default and rollback option. **ASR/TTS are still turn-based, not streaming**, and the VAD uses local amplitude detection, not echo cancellation. See the Chinese manual for limitations and verification.
