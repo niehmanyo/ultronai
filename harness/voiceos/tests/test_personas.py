@@ -12,8 +12,11 @@ spec.loader.exec_module(personas)
 
 
 class TestPersonas(unittest.TestCase):
-    def test_three_voice_styles_are_distinct(self):
-        self.assertEqual(set(personas.PERSONAS), {"prime", "sentinel", "sovereign"})
+    def test_four_voice_styles_are_distinct(self):
+        self.assertEqual(set(personas.PERSONAS), {"prime", "sentinel", "sovereign", "glacial"})
+        self.assertIn("No soft reassurance", personas.PERSONAS["glacial"]["instructions"])
+        self.assertIn("No smile", personas.PERSONAS["sovereign"]["instructions"])
+        self.assertIn("Threat assessment", personas.SAMPLE_EN)
         self.assertNotEqual(personas.PERSONAS["prime"]["instructions"],
                             personas.PERSONAS["sovereign"]["instructions"])
         for name, preset in personas.PERSONAS.items():
