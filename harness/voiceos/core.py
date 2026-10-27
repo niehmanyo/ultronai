@@ -129,6 +129,7 @@ def build_parser():
     p.add_argument("--model", default=os.getenv("ULTRON_VOICE_MODEL", "gpt-4.1-mini"))
     p.add_argument("--provider", default=os.getenv("ULTRON_VOICE_PROVIDER", "openai"))
     p.add_argument("--profile", default=os.getenv("ULTRON_VOICE_PROFILE", "sdk"))
+    p.add_argument("--sdk-patch", type=Path, default=Path(__file__).resolve().parent / "openai.patch.yml", help="DSH SDK per-launch OpenAI adapter overlay (never stores API Key)")
     p.add_argument("--stt-model", default=os.getenv("ULTRON_STT_MODEL", "gpt-4o-mini-transcribe"))
     p.add_argument("--voice", default=os.getenv("ULTRON_MAC_VOICE", ""))
     p.add_argument("--session-id", default="ultron-voiceos-mvp")
@@ -157,6 +158,7 @@ def doctor(args) -> int:
         except OSError:
             print("[VoiceOS] macOS say: not available")
     print("[VoiceOS] Provider/model:", args.provider, args.model, "Profile:", args.profile)
+    print("[VoiceOS] SDK patch:", str(args.sdk_patch), "exists" if args.sdk_patch.is_file() else "MISSING")
     print("[VoiceOS] NOTE: SDK has its own runtime and does not attach to DSH Web sessions.")
     return 0
 
@@ -201,11 +203,15 @@ def main(argv=None) -> int:
         print("[VoiceOS] Workspace directory does not exist.", file=sys.stderr)
         return 2
 
-    print("[VoiceOS] Starting DSH SDK runtime; Web UI session is not shared.")
+    sdk_patch = args.sdk_patch.expanduser().resolve()
+    if not sdk_patch.is_file():
+        print(f"[VoiceOS] SDK model adapter patch does not exist: {sdk_patch}", file=sys.stderr)
+        return 2
+    print("[VoiceOS] Starting DSH SDK runtime with OpenAI provider overlay; Web UI session is not shared.")
     try:
         with DeepSeekHarness(
             dsh_home=home, cwd=workspace, profile=args.profile,
-            provider=args.provider, model=args.model,
+            patches=(str(sdk_patch),), provider=args.provider, model=args.model,
         ) as harness:
             pending_text = args.text
             while True:
