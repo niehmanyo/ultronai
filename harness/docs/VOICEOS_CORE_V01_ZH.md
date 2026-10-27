@@ -51,7 +51,7 @@ macOS 首次录音时需要授予 **Terminal 或当前使用的终端 App** 麦�
 DSH Web Settings 内存储的密钥**不会自动转变为 Python 进程的 OPENAI_API_KEY**。为安全起见，在当前终端临时输入；不要把 Key 写入 Git、README、命令历史或聊天记录。
 
 \`\`\`bash
-read -s 'OPENAI_API_KEY?OpenAI API Key: '
+read -r -s -p 'OpenAI API Key: ' OPENAI_API_KEY
 echo
 export OPENAI_API_KEY
 \`\`\`
@@ -108,3 +108,20 @@ python voiceos/core.py
 - **UI 阶段**：在语音内核稳定、接口事件固定之后才开始科幻 HUD。
 
 上游 SDK 文档：https://github.com/deepseek-ai/deepseek-harness/blob/master/python/sdk/README.md
+
+## 8. SDK 返回 JsonRpcError 的诊断
+
+首先从功能分支拉取最新提交并重新执行文字测试：
+
+```bash
+cd ~/Downloads/ultron-web
+git pull --ff-only origin feature/voiceos-core-mvp
+cd harness
+python voiceos/core.py --text '你好，请用一句中文介绍自己' --no-speech
+```
+
+新版脚本会输出脱敏后的 JSON-RPC 错误摘要（会隐藏当前 OPENAI_API_KEY 和常见 sk- token），用于确定是 provider/model 适配器未注册、profile 加载失败、凭据问题还是其他异常。请不要粘贴 DSH_HOME 中包含凭据的配置文件；如果错误中仍含有个人信息，请自行遮盖后再分享。
+
+**关键区别**：`deepseek_harness` SDK 的 `sdk` profile 默认不保证装载 DSH Web 的 `openai` provider。单独 `export OPENAI_API_KEY` 并不等于 `sdk` 配置了 OpenAI 模型适配器。若错误证实是 adapter/provider 缺失，需要在 SDK profile 中显式注册 OpenAI adapter，而不是重复更换密钥。该适配将基于当前安装的 SDK release profile schema 修复。
+
+此外，`read -s 'VAR?prompt'` 是 zsh 专用语法，bash 应使用 `read -r -s -p 'OpenAI API Key: ' OPENAI_API_KEY`，随后 `echo; export OPENAI_API_KEY`。如果 doctor 已显示 Key `set`，不要再次输入。
