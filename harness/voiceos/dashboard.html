@@ -34,7 +34,7 @@ main{position:relative;width:100vw;height:100vh;min-height:520px;isolation:isola
 <main>
 <div id="coreHalo"></div><canvas id="neural3d" aria-label="Three dimensional neural core"></canvas><div id="fallback3d" hidden></div><div class="crosshair"></div>
 <header class="top"><div class="logo"><span>◇</span> ULTRON</div><div class="info"><span id="signal" class="signal"></span><span id="connection">CONNECTING</span><span id="clock"></span></div></header>
-<div class="pill"><span>◈</span> COGNITIVE CORTEX / 3D</div>
+<div class="pill"><span>◈</span> COGNITIVE CORTEX / 3D <span id="tool-label" style="color:#61e6e0;margin-left:12px"></span></div>
 <div class="statebar" aria-hidden="true"><span data-step="listening"></span><span data-step="transcribing"></span><span data-step="thinking"></span><span data-step="synthesizing"></span><span data-step="speaking"></span></div>
 <div class="status" aria-live="polite"><strong id="status">AWAITING SIGNAL</strong><small id="detail">Local runtime visualization</small></div>
 <footer class="footer"><div class="metrics"><div class="metric"><b id="asr">—</b><small>ASR</small></div><div class="metric"><b id="agent">—</b><small>AGENT</small></div><div class="metric"><b id="tts">—</b><small>TTS + PLAY</small></div><div class="metric"><b id="latency">—</b><small>TOTAL</small></div></div><div class="reply" id="reply">VOICEOS / READY</div></footer>
@@ -45,9 +45,16 @@ main{position:relative;width:100vw;height:100vh;min-height:520px;isolation:isola
 const names={idle:"STANDBY",listening:"LISTENING",transcribing:"RECOGNIZING",thinking:"PROCESSING",synthesizing:"VOICE SYNTHESIS",speaking:"SPEAKING",completed:"READY",error:"SYSTEM ALERT",speech_detected:"VOICE DETECTED"};
 let sequence=0,activeTurn=0;function metric(key,value){if(Number.isFinite(value))$(key).textContent=Math.round(value)+" ms"}
 function onEvent(e){if(!e||!e.stage)return;
+if(e.stage==="tool_event"){
+const m=e.metrics||{};if(m.turn!==activeTurn)return;
+window.UltronNeural?.updateNetwork(m);
+$("tool-label").textContent=(typeof m.tool_name==="string"?m.tool_name.slice(0,30):"TOOL")+" · "+(m.tool_state||"");
+return;}
 if(e.stage==="audio_level"){if(typeof e.metrics?.level==="number"&&e.metrics.turn===activeTurn)window.UltronNeural?.setLevel(e.metrics.level);return}
 if(e.seq<=sequence)return;sequence=e.seq;
-const stage=e.stage;activeTurn=typeof e.metrics?.turn==="number"?e.metrics.turn:activeTurn;
+const stage=e.stage;const incomingTurn=typeof e.metrics?.turn==="number"?e.metrics.turn:activeTurn;
+if(stage==="listening"&&incomingTurn!==activeTurn){window.UltronNeural?.resetNetwork();$("tool-label").textContent=""}
+activeTurn=incomingTurn;
 $("status").textContent=names[stage]||stage.toUpperCase();$("detail").textContent=(e.detail||"").slice(0,90);
 document.querySelectorAll("[data-step]").forEach(x=>x.classList.toggle("active",x.dataset.step===stage));
 window.UltronNeural?.setState(stage);
