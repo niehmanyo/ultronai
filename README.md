@@ -169,4 +169,4 @@ python -m unittest discover -s voiceos/tests -v
 python -u voiceos/core.py --hands-free --reply-language en --tts kokoro --kokoro-voice am_onyx --robotic 55 --kokoro-fallback none --dashboard
 ```
 
-See [Chinese Kokoro INT8 setup](harness/docs/VOICEOS_KOKORO_INT8_ZH.md). Use `--kokoro-fallback openai` to allow a paid GLACIAL fallback; the default may use cloud TTS on a local error. The branch has not been merged or validated on the user's Mac yet.
+See [Chinese Kokoro INT8 setup](harness/docs/VOICEOS_KOKORO_INT8_ZH.md). Use `--kokoro-fallback openai` to allow a paid GLACIAL fallback; the default is `none` to avoid surprise cloud TTS charges. The branch has not been merged or validated on the user's Mac yet.
