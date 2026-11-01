@@ -110,3 +110,18 @@ python voiceos/core.py --hands-free
 ```
 
 The existing push-to-talk command `python voiceos/core.py` remains the default and rollback option. **ASR/TTS are still turn-based, not streaming**, and the VAD uses local amplitude detection, not echo cancellation. See the Chinese manual for limitations and verification.
+
+
+## VoiceOS Cognitive Cortex — local JARVIS-style visualization (feature branch)
+
+On `feature/voiceos-visual-cortex`, VoiceOS includes a browser dashboard with a central animated AI core, live microphone/ASR/DSH/TTS states, real timing metrics and recent completed responses. It is an **observable activity display**, not hidden model chain-of-thought. Local-only SSE; no additional front-end dependencies.
+
+```bash
+cd harness
+source .venv-voiceos312/bin/activate
+python -u voiceos/dashboard_demo.py # Visual demo without API use; Ctrl+C to exit
+# Or start the live agent with a read-only visual panel:
+python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55 --dashboard
+```
+
+Visit http://127.0.0.1:8765. See [Chinese Cognitive Cortex guide](harness/docs/VOICEOS_COGNITIVE_CORTEX_ZH.md) for setup, boundaries and acceptance checks. No voice interruption. No PR or merge performed as part of this UI branch.
