@@ -147,7 +147,7 @@ def build_parser():
     p.add_argument("--kokoro-voice", choices=("am_onyx", "am_adam", "am_echo", "am_michael", "bm_george", "bm_lewis", "bm_daniel"), default="am_onyx", help="Local English male voice")
     p.add_argument("--kokoro-speed", type=float, default=0.92, help="Local Kokoro speech rate 0.7 to 1.3")
     p.add_argument("--kokoro-model-dir", type=Path, default=None, help="Optional local cached model directory")
-    p.add_argument("--kokoro-fallback", choices=("openai", "none"), default="openai", help="On local synthesis failure use paid OpenAI GLACIAL, or stop")
+    p.add_argument("--kokoro-fallback", choices=("openai", "none"), default="none", help="Default none prevents surprise TTS charges; set openai for paid GLACIAL fallback")
     p.add_argument("--reply-language", choices=("auto", "en"), default="auto", help="Request English-only Agent replies even to Chinese microphone input (best-effort instruction)")
     p.add_argument("--tts-model", default="gpt-4o-mini-tts", help="OpenAI Speech API preview model (deprecated; scheduled shutdown 2027-01-06)")
     p.add_argument("--robotic", type=int, default=25, help="Original robotic filter 0..100; available for OpenAI and local Kokoro WAV")
