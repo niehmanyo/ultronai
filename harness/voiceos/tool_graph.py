@@ -30,7 +30,7 @@ class ToolGraphObserver:
         self.hub = hub
         self.turn = turn
         self.max_nodes = max_nodes
-        self.calls: dict[str, tuple[str, int]] = {}
+        self.calls: dict[tuple[str, str], tuple[str, int]] = {}
         self.next_id = 0
 
     def __call__(self, notification: Any):
@@ -38,28 +38,34 @@ class ToolGraphObserver:
         if event is None:
             return
         kind, data = event.get("type"), event.get("data")
+        payload = getattr(notification, "payload", {})
+        session = payload.get("sessionId", "") if isinstance(payload, dict) else ""
+        if not isinstance(session, str):
+            return
         if not isinstance(data, dict):
             return
         if kind == "tool/call":
             call_id, name = data.get("callId"), data.get("name")
             if not isinstance(call_id, str) or not call_id or not isinstance(name, str):
                 return
-            if len(self.calls) >= self.max_nodes or call_id in self.calls:
+            key = (session, call_id)
+            if self.next_id >= self.max_nodes or key in self.calls:
                 return
             # Never send model-supplied tool args. Tool names may be custom;
             # display only simple bounded identifiers.
             display_name = name if SAFE_NAME.fullmatch(name) else "tool"
             self.next_id += 1
-            self.calls[call_id] = (display_name, self.next_id)
+            self.calls[key] = (display_name, self.next_id)
             self.hub("tool_event", turn=self.turn, tool_id=self.next_id,
                      tool_name=display_name, tool_state="running", detail="Tool started")
         elif kind == "tool/result":
             message = data.get("message")
             source = message.get("source") if isinstance(message, dict) else None
             call_id = source.get("callId") if isinstance(source, dict) else None
-            if not isinstance(call_id, str) or call_id not in self.calls:
+            key = (session, call_id)
+            if not isinstance(call_id, str) or key not in self.calls:
                 return
-            name, public_id = self.calls.pop(call_id)
+            name, public_id = self.calls.pop(key)
             # The SDK's tool-result message can expose isError; never expose
             # message.content / raw error info to the dashboard.
             is_error = bool(message.get("isError", False))
