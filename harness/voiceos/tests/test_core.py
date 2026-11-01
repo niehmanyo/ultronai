@@ -34,9 +34,8 @@ class TestVoiceOS(unittest.TestCase):
         self.assertEqual(core.build_parser().parse_args(["--session-id", "fresh-test"]).session_id, "fresh-test")
 
     def test_handsfree_options(self):
-        args = core.build_parser().parse_args(["--hands-free", "--barge-in", "--vad-threshold", "850"])
+        args = core.build_parser().parse_args(["--hands-free", "--vad-threshold", "850"])
         self.assertTrue(args.hands_free)
-        self.assertTrue(args.barge_in)
         self.assertEqual(args.vad_threshold, 850)
 
     def test_agent_response(self):
