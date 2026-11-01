@@ -149,7 +149,6 @@ def build_parser():
     p.add_argument("--text", help="Skip microphone/STT and send this text to DSH (integration smoke test)")
     p.add_argument("--no-speech", action="store_true", help="Disable macOS TTS playback")
     p.add_argument("--hands-free", action="store_true", help="Automatically detect voice start/end; Ctrl+C to stop")
-    p.add_argument("--barge-in", action="store_true", help="Experimental voice cut-in during macOS speech (requires --hands-free; headphones recommended)")
     p.add_argument("--vad-threshold", type=int, default=550, help="Local mic energy threshold, default 550 (tune for microphone/environment)")
     p.add_argument("--doctor", action="store_true", help="Check dependencies, without making model calls")
     return p
@@ -199,12 +198,6 @@ def main(argv=None) -> int:
         print("[VoiceOS] This MVP requires macOS for microphone and speech output.", file=sys.stderr)
         return 2
     configure_proxy()
-    if args.barge_in and args.tts == "openai":
-        print("[VoiceOS] --barge-in is not yet supported with --tts openai; use macos TTS for barge-in experiments.", file=sys.stderr)
-        return 2
-    if args.barge_in and not args.hands_free:
-        print("[VoiceOS] --barge-in requires --hands-free.", file=sys.stderr)
-        return 2
     if not 0 <= args.robotic <= 100:
         print("[VoiceOS] --robotic must be between 0 and 100.", file=sys.stderr)
         return 2
@@ -239,11 +232,9 @@ def main(argv=None) -> int:
     session_id = args.session_id or f"ultron-voice-{uuid.uuid4().hex}"
     print(f"[VoiceOS] Session: {session_id} (same for all turns in this launch)")
     if args.hands_free:
-        from handsfree import MicVAD, listen_utterance, play_with_barge_in
+        from handsfree import MicVAD, listen_utterance
         vad = MicVAD(threshold=args.vad_threshold)
         print("[VoiceOS] Hands-free active; local energy VAD (not a wake-word or always-on daemon).")
-        if args.barge_in:
-            print("[VoiceOS] Experimental voice interruption enabled; use headphones to avoid echo-triggered interruptions.")
     print("[VoiceOS] Starting DSH SDK runtime with OpenAI provider overlay; Web UI session is not shared.")
     try:
         with DeepSeekHarness(
@@ -280,8 +271,6 @@ def main(argv=None) -> int:
                     if args.tts == "openai":
                         from personas import speak_openai
                         speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic)
-                    elif args.hands_free and args.barge_in:
-                        play_with_barge_in(reply, voice=args.voice, vad=vad)
                     else:
                         speak(reply, voice=args.voice)
     except KeyboardInterrupt:
