@@ -34,6 +34,12 @@ def main():
             ]
             for stage, detail, metrics, duration in phases:
                 dash.emit(stage, detail=detail, turn=number, **metrics)
+                if stage == "thinking":
+                    # DEMO ONLY: not a real DSH tool execution.
+                    dash.emit("tool_event", detail="DEMO tool started", turn=number, tool_id=1, tool_name="demo.search", tool_state="running")
+                    time.sleep(duration / 2)
+                    dash.emit("tool_event", detail="DEMO tool finished", turn=number, tool_id=1, tool_name="demo.search", tool_state="completed")
+                    continue
                 if stage == "speaking":
                     # Visual-only demo: explicitly simulated speech loudness.
                     ticks = int(duration / .05)
