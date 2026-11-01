@@ -303,8 +303,9 @@ def main(argv=None) -> int:
                     tts_start = time.monotonic()
                     if args.tts == "openai":
                         from personas import speak_openai
-                        speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic)
+                        speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic, on_playback=lambda: observe("speaking", detail="AI voice now playing", turn=turn_number))
                     else:
+                        observe("speaking", detail="macOS voice now playing", turn=turn_number)
                         speak(reply, voice=args.voice)
                     observe("speaking", detail="Speech playback completed", tts_ms=round((time.monotonic()-tts_start)*1000), turn=turn_number)
                 observe("completed", detail="Ready for next conversation", turn_ms=round((time.monotonic()-turn_start)*1000), reply=reply[:1300], turn=turn_number)
