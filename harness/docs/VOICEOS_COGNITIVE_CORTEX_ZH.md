@@ -1,17 +1,16 @@
-# ULTRON Cognitive Cortex — 本地思维可视化 UI
+# ULTRON Cognitive Cortex V0.2 — 真 3D 神经核心与语音联动
 
-## 产品目标与边界
+## 本轮升级
 
-原创 JARVIS 氛围的深色科技视觉控制台。保留已有 Python VoiceOS + DeepSeek Harness SDK Agent；只展示真实可观测事件，不显示或伪造模型内部隐藏思维链。
+- 从二维 SVG 与文字面板替换为浏览器原生 WebGL 3D 神经球体、三个倾斜的轨道环和漂浮粒子，有真实 XYZ 坐标及透视投影。
+- UI 极简化：只保留状态、连接灯、底部 ASR/Agent/TTS 耗时与最近回答；中枢占据主画面。
+- **真实语音振幅联动**：Python 在 TTS WAV 播放前提取 50ms 一段的 RMS 音量包络，播放后每 50ms 同步通过 SSE 推送 `audio_level`。页面球体、粒子与光晕跟随实际声音波动。
+- `speaking` 动画在系统播放器真正启动后进入，不在网络合成阶段假装播报；`thinking` 只是 Agent 正在工作，不暴露内部隐藏思维链。
+- 浏览器不接收原始 WAV/麦克风数据，只收到 0~1 音量值；SSE 音量帧不写入事件历史，刷新页面不会回放过去语音。
+- 原生 WebGL，不依赖 CDN、Three.js/npm 和外网下载；WebGL 不可用时显示静态回退核心。没有新增音效处理费用。
+- **不包含语音打断**，GLACIAL 英文语音、自动监听和原 DSH 工作流不变。
 
-- 中央动态 AI 核心：随 LISTENING、TRANSCRIBING、THINKING、SYNTHESIZING、SPEAKING 状态变化。
-- 左侧：语音及 Agent 执行阶段；右侧：真实 ASR、Agent、TTS 加播放、整轮耗时。
-- 底部：近期事件时间线与最近完整回复。
-- 技术：Python 标准库 HTTP + Server-Sent Events，原生 HTML/CSS/JS；绑定 127.0.0.1:8765，只读。
-- 不引入打断功能。语音播报完后恢复免回车自动监听。
-- 目前 THINKING 表示 DSH Agent 执行阶段，不等于内部推理文本、Token 流或工具执行图谱。
-
-## 先看视觉 Demo：不消耗 API
+## 安装和测试
 
 ```bash
 cd ~/Downloads/ultron-web
@@ -21,37 +20,42 @@ git pull --ff-only origin feature/voiceos-visual-cortex
 cd harness
 source .venv-voiceos312/bin/activate
 python -m unittest discover -s voiceos/tests -v
+```
+
+### 1. 先看免费本地演示
+
+```bash
 python -u voiceos/dashboard_demo.py
 ```
 
-浏览器通常会自动打开 http://127.0.0.1:8765。若未自动打开，请手动访问。演示数据有 DEMO 标记，完全是模拟事件，仅用于评估视觉效果。按 Ctrl+C 退出 Demo，释放端口。
+浏览器打开 `http://127.0.0.1:8765`。DEMO 通过模拟音量包络测试 3D 球体发声效果，**不是实际语音，也不是实测模型耗时**。按 Ctrl+C 关闭演示释放端口。
 
-## 运行真实 VoiceOS + 可视化界面
+### 2. 真实语音 + 3D UI
 
 ```bash
 python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55 --dashboard
 ```
 
-然后在浏览器打开 http://127.0.0.1:8765。这会继续使用原先的麦克风、ASR、DSH Agent 与 TTS，不需要回车发送每轮对话。界面不会替代现有终端，只同步显示实际事件。
+浏览器打开 `http://127.0.0.1:8765`。实际完整流程：自动检测讲话结束 → OpenAI ASR → DSH SDK Agent → GLACIAL TTS → WAV 本地机械处理 → 播放时实时音量反馈至神经核心 → 播报结束自动恢复监听。
 
-端口冲突时传入 --dashboard-port 8766，并改用对应浏览器 URL；设为 0 可自动选择空闲端口。按 Ctrl+C 关闭 VoiceOS 和面板。
+如果端口被占：加 `--dashboard-port 8766`。在 CLI 中 Ctrl+C 停止。
 
-## 时间指标口径
+## 验收
 
-- TRANSCRIPTION：语音 WAV 提交至 ASR 后到识别结束的 API 用时，不包括麦克风录音。
-- AGENT WORK：完整的 DSH SDK run() 调用用时，包括可能发生的工具执行。
-- TTS + PLAYBACK：语音合成、DSP 与完整播放的总用时，不是单纯生成耗时。
-- TURN LATENCY：从进入监听到本轮完成的总时长，包括用户说话，不等于说完话到第一声。
-- 当前都是单轮指标，不是 P50/P95。下一阶段继续拆分首 Token、首音频延迟，结合工具事件做图谱。
+1. 免费 DEMO 能显示旋转 3D 球体和倾斜环；Speaking 阶段随演示音量变化，不是匀速呼吸。
+2. 真实模式连接状态为 LINKED；说话后状态按实际阶段切换；不需要按回车发送。
+3. GLACIAL 开始从 Mac 出声时，球体和光晕随英文重音起伏；结束后归零并进入监听。
+4. 不传输原始音频、不泄漏密钥、无打断入口。请在本机运行离线测试并通过浏览器视觉验收；当前 GitHub 提交不代表已在你的 Mac 实测。
 
-## 安全与验收
+## 当前限制
 
-- 仅本机 127.0.0.1 服务，不要暴露至公网、端口转发或反向代理。
-- 页面可看到 Agent 回复内容，不显示 API Key，不具备执行命令接口。
-- 建议测试：浏览器连接显示 CONNECTED；连续三轮对话无需回车；视觉状态、事件与终端日志匹配；播报后自动恢复 LISTENING。
-- 本次是代码提交，尚未通过用户 Mac 实机验证；单元测试需要用户本地运行。
+- 已生成完整 WAV 后才播放。播放时音量驱动是相对开始时间同步，`afplay` 实际缓冲可能有小幅偏差；下一阶段可从同一播放器输出回调获取更精准的播放时钟。
+- TTS 耗时指标仍为 **TTS + 完整播放**，不应当成首声音延迟。
+- 若原始音频不是 PCM16 WAV，音量模块会拒绝对应格式；OpenAI 的 `response_format=wav` 正常应返回可处理的 PCM WAV。
+- 本版是显式 WebGL 透视 3D，不依赖 Three.js。视觉效果随 Mac GPU/WebGL 能力和浏览器性能变化。
+- WebGL 出现兼容问题时有视觉回退，但回退画面不具备 3D 动画。
+- 隐私：页面本地只读，仍可能显示 Agent 最后输出，禁止公网暴露。
 
-## 后续
+## 未来方向
 
-V0.2：接入 DSH SDK 经文档确认的公开工具事件（工具名称、开始/结束/错误），不泄露隐藏思维链。
-V0.3：耗时历史趋势、P50/P95、从用户说完到首声的真实延迟及瓶颈高亮。
+增加真实 DSH 工具调用图谱和 P50/P95 性能趋势；若需要更高级的表面材质，可基于当前 3D 事件接口升级自定义 Shader，但不再通过大段文字填充界面。
