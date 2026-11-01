@@ -149,7 +149,7 @@ def build_parser():
     p.add_argument("--text", help="Skip microphone/STT and send this text to DSH (integration smoke test)")
     p.add_argument("--no-speech", action="store_true", help="Disable macOS TTS playback")
     p.add_argument("--hands-free", action="store_true", help="Automatically detect voice start/end; Ctrl+C to stop")
-    p.add_argument("--barge-in", action="store_true", help="Experimental voice cut-in during macOS speech (requires --hands-free; headphones recommended)")
+    p.add_argument("--barge-in", action="store_true", help="Experimental voice cut-in during TTS (requires --hands-free; headphones recommended)")
     p.add_argument("--vad-threshold", type=int, default=550, help="Local mic energy threshold, default 550 (tune for microphone/environment)")
     p.add_argument("--doctor", action="store_true", help="Check dependencies, without making model calls")
     return p
@@ -199,9 +199,6 @@ def main(argv=None) -> int:
         print("[VoiceOS] This MVP requires macOS for microphone and speech output.", file=sys.stderr)
         return 2
     configure_proxy()
-    if args.barge_in and args.tts == "openai":
-        print("[VoiceOS] --barge-in is not yet supported with --tts openai; use macos TTS for barge-in experiments.", file=sys.stderr)
-        return 2
     if args.barge_in and not args.hands_free:
         print("[VoiceOS] --barge-in requires --hands-free.", file=sys.stderr)
         return 2
@@ -279,7 +276,7 @@ def main(argv=None) -> int:
                 if not args.no_speech:
                     if args.tts == "openai":
                         from personas import speak_openai
-                        speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic)
+                        speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic, vad=vad if args.hands_free and args.barge_in else None)
                     elif args.hands_free and args.barge_in:
                         play_with_barge_in(reply, voice=args.voice, vad=vad)
                     else:
