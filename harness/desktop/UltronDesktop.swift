@@ -1,6 +1,7 @@
 import Cocoa
 import WebKit
 import Security
+import Darwin
 
 // A native macOS desktop shell for the existing private VoiceOS Python runtime.
 // Never place the OpenAI API key in argv, URLs, logs, or the .app bundle.
@@ -14,7 +15,6 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var statusItem: NSStatusItem?
     private var didLoad = false
     private var closing = false
-    private var settingsItem: NSMenuItem?
     private let keychainService = "com.ultron.voiceos.desktop"
     private let keychainAccount = "OPENAI_API_KEY"
 
@@ -51,6 +51,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         app.addItem(NSMenuItem(title: "About Ultron", action: #selector(about), keyEquivalent: ""))
         app.addItem(NSMenuItem(title: "API Key Settings…", action: #selector(editCredentials), keyEquivalent: ","))
         app.addItem(NSMenuItem(title: "Restart VoiceOS", action: #selector(restartWorker), keyEquivalent: "r"))
+        app.addItem(NSMenuItem(title: "Pause Microphone / Stop Agent", action: #selector(stopListening), keyEquivalent: "p"))
         app.addItem(NSMenuItem(title: "Show Ultron", action: #selector(showWindow), keyEquivalent: "1"))
         app.addItem(NSMenuItem.separator())
         app.addItem(NSMenuItem(title: "Quit Ultron", action: #selector(quitApp), keyEquivalent: "q"))
@@ -85,9 +86,10 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         let menu = NSMenu()
         let show = NSMenuItem(title: "Show Neural Core", action: #selector(showWindow), keyEquivalent: "")
         let restart = NSMenuItem(title: "Restart Agent", action: #selector(restartWorker), keyEquivalent: "")
+        let pause = NSMenuItem(title: "Pause Microphone", action: #selector(stopListening), keyEquivalent: "")
         let settings = NSMenuItem(title: "API Key Settings…", action: #selector(editCredentials), keyEquivalent: "")
         let quit = NSMenuItem(title: "Quit Ultron", action: #selector(quitApp), keyEquivalent: "")
-        for item in [show, restart, settings, quit] { item.target = self; menu.addItem(item) }
+        for item in [show, restart, pause, settings, quit] { item.target = self; menu.addItem(item) }
         statusItem?.menu = menu
     }
 
@@ -170,6 +172,11 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         stopWorker()
         startVoiceOS()
     }
+    @objc private func stopListening(_ sender: Any?) {
+        stopWorker()
+        showLaunchState("MICROPHONE PAUSED", "Ultron has stopped its voice process. Select Restart Agent from the menu to resume.")
+        statusItem?.button?.title = "◇ PAUSED"
+    }
     @objc private func showWindow(_ sender: Any?) {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -208,6 +215,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         }
         didLoad = false
         pending = ""
+        statusItem?.button?.title = "◇ ULTRON"
         showLaunchState("INITIALIZING ULTRON", "Preparing GLACIAL voice and the neural interface…")
         let worker = Process()
         worker.executableURL = pythonURL
@@ -274,10 +282,13 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         worker.terminationHandler = nil
         process = nil
         if worker.isRunning {
-            worker.terminate()
-            // VoiceOS may be in the middle of an external model request;
-            // allow cleanup without freezing the macOS UI thread.
+            // SIGINT reaches the Python main thread as KeyboardInterrupt,
+            // letting the DSH context manager unwind and close gracefully.
+            Darwin.kill(worker.processIdentifier, SIGINT)
             DispatchQueue.global(qos: .utility).async {
+                let deadline = Date().addingTimeInterval(4)
+                while worker.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.1) }
+                if worker.isRunning { worker.terminate() }
                 worker.waitUntilExit()
             }
         }
