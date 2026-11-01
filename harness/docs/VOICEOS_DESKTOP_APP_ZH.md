@@ -5,10 +5,10 @@
 一次性通过构建脚本在 `~/Applications/Ultron VoiceOS.app` 安装原生 macOS 应用。之后直接在 Finder、Launchpad（视 macOS 索引而定）或 Dock 双击打开，无需终端运行 VoiceOS。
 
 - 原生 Cocoa 窗口（默认 560×640，可调整大小）内嵌 WKWebView，直接显示现有 5750 点云的 3D Cognitive Cortex；无需再打开浏览器。
-- Dock 图标与菜单栏 `◇ ULTRON` 常驻菜单，可打开窗口、Restart Agent、Pause Microphone、API Key Settings、Quit。
+- Dock 图标与菜单栏 `◇ ULTRON` 常驻菜单，可打开窗口、Restart Agent、Pause Microphone、Toggle Always on Top（窗口置顶）、API Key Settings、Quit。
 - 保留 DeepSeek Harness SDK Agent、OpenAI 语音识别、GLACIAL 英文语音、自动 VAD 免回车、3D 音量联动和真实工具调用节点。
 - 首次启动在原生密码框输入 OpenAI Platform API Key，保存到 macOS Keychain；**不写入 `.app`、仓库、命令行参数或磁盘日志**。
-- Finder 启动时自动设置 Python 进程所需的工作目录、用户级 PATH 与 API Key；使用已有 Python venv，关闭/暂停会向 Python 进程发送 SIGINT 使其有机会安全清理。
+- Finder 启动时自动设置 Python 进程所需的工作目录、用户级 PATH 与 API Key；使用已有 Python venv，暂停/重启会先向 Python 进程发送 SIGINT 使其有机会安全清理，避免同时启动多个麦克风实例；Quit 则立即终止语音进程。
 - UI 的本地 WebKit 只能导航到当前 `127.0.0.1` 的 VoiceOS 端口，禁止进入外部网址。
 - **不包含 Kokoro**。这条功能分支是从 `feature/voiceos-neural-dense-ui` 派生的，不需要卡住的 Kokoro 模型安装。
 
@@ -36,7 +36,7 @@ bash desktop/build-macos-app.sh
 1. 输入原先用于 DSH 和 ASR 的 OpenAI Platform API Key（请勿在聊天中粘贴）。
 2. 允许 macOS 对 Python/Ultron 提示的麦克风权限。某些系统会把授权标注给底层 Python 解释器，因为音频采集发生在其子进程中。
 3. 启动后显示 `ULTRON · Cognitive Cortex` 原生窗口。待 `[VoiceOS] Cognitive dashboard:` 本地服务器准备好，会自动加载 3D 神经核心。**无需额外浏览器，也无需按回车对话。**
-4. 关闭窗口不等于停止监听：应用仍驻留菜单栏。可点击菜单栏 `◇ ULTRON → Pause Microphone` 停止语音，再用 `Restart Agent` 恢复；或 `Quit Ultron` 完全退出。
+4. 关闭窗口不等于停止监听；Dock 再次点击可重新显示窗口：应用仍驻留菜单栏。可点击菜单栏 `◇ ULTRON → Pause Microphone` 停止语音，再用 `Restart Agent` 恢复；或 `Quit Ultron` 完全退出。
 
 ## 注意事项
 
