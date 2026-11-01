@@ -1,3 +1,5 @@
+> **2026-11-01 产品决策更新：VoiceOS 已移除语音打断（barge-in）。本文早期段落中出现的 `--barge-in` 和实验打断说明均已废弃，不应再执行。当前有效的目标是免回车连续对话、低延迟和回答质量；以 `VOICEOS_V02_ROADMAP_ZH.md` 为准（V0.2 分支）。**
+
 # Ultron VoiceOS V0.1 — 终端语音内核（macOS）
 
 **本阶段仅实现内核，不开发 HUD/Web UI。**
