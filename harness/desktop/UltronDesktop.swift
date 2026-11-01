@@ -82,6 +82,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         configuration.websiteDataStore = .nonPersistent()
         webView = WKWebView(frame: rect, configuration: configuration)
         webView.navigationDelegate = self
+        webView.autoresizingMask = [.width, .height]
         webView.setValue(false, forKey: "drawsBackground")
         window.contentView = webView
         window.makeKeyAndOrderFront(nil)
