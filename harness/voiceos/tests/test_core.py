@@ -55,6 +55,13 @@ class TestVoiceOS(unittest.TestCase):
         self.assertEqual(args.persona, "glacial")
         self.assertEqual(args.reply_language, "en")
 
+    def test_agent_passes_notification_callback_only_when_configured(self):
+        agent = MagicMock()
+        agent.run.return_value.final_response = "Done"
+        callback = MagicMock()
+        self.assertEqual(core.run_agent(agent, "Check", "session-7", on_notification=callback), "Done")
+        agent.run.assert_called_once_with("Check", session_id="session-7", on_notification=callback)
+
     def test_transcribe_uses_audio_file(self):
         client = MagicMock()
         client.audio.transcriptions.create.return_value.text = "  你好 Ultron  "
