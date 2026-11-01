@@ -14,6 +14,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var pending = ""
     private var statusItem: NSStatusItem?
     private var didLoad = false
+    private var allowedPort: Int?
     private var closing = false
     private let keychainService = "com.ultron.voiceos.desktop"
     private let keychainAccount = "OPENAI_API_KEY"
@@ -78,6 +79,14 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         window.contentView = webView
         window.makeKeyAndOrderFront(nil)
         showLaunchState("INITIALIZING ULTRON", "Starting private VoiceOS runtime…")
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else { decisionHandler(.cancel); return }
+        if url.scheme == "about" { decisionHandler(.allow); return }
+        let allowed = url.scheme == "http" && url.host == "127.0.0.1" && url.port == allowedPort
+        decisionHandler(allowed ? .allow : .cancel)
     }
 
     private func createStatusItem() {
@@ -214,6 +223,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             return
         }
         didLoad = false
+        allowedPort = nil
         pending = ""
         statusItem?.button?.title = "◇ ULTRON"
         showLaunchState("INITIALIZING ULTRON", "Preparing GLACIAL voice and the neural interface…")
@@ -270,6 +280,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
                 let suffix = String(line.dropFirst(prefix.count))
                 if let port = Int(suffix), port > 0 && port < 65536 {
                     didLoad = true
+                    allowedPort = port
                     webView.load(URLRequest(url: URL(string: "http://127.0.0.1:\(port)/")!))
                 }
             }
