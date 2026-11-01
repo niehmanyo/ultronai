@@ -163,3 +163,67 @@ def play_with_barge_in(text: str, *, voice="", vad: MicVAD,
         if process.poll() is None:
             process.terminate()
             process.wait()
+
+
+
+def play_wav_with_barge_in(path, *, vad: MicVAD, min_play_seconds=0.7) -> bool:
+    """Play pre-generated WAV, monitoring voice to interrupt playback.
+
+    This is experimental energy-based interruption. Prefer headphones; no AEC.
+    Barge-in utterance is not transcribed or delivered to the agent. The next
+    listening turn starts only after playback is stopped.
+    """
+    import subprocess
+    import os
+
+    if not os.path.isfile(path):
+        raise FileNotFoundError(path)
+    process = subprocess.Popen(
+        ["afplay", str(path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    samples = queue.Queue(maxsize=100)
+    consecutive = 0
+    started = time.monotonic()
+    interrupted = False
+    print("[VoiceOS] AI voice playback with experimental interruption (headphones recommended).", flush=True)
+    try:
+        try:
+            with _open_stream(vad, samples):
+                while process.poll() is None:
+                    try:
+                        block = samples.get(timeout=0.1)
+                    except queue.Empty:
+                        continue
+                    if time.monotonic() - started < min_play_seconds:
+                        continue
+                    if vad.rms(block) >= vad.threshold * 2.8:
+                        consecutive += 1
+                    else:
+                        consecutive = 0
+                    if consecutive >= max(1, round(450 / vad.block_ms)):
+                        interrupted = True
+                        process.terminate()
+                        try:
+                            process.wait(timeout=2)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                            process.wait()
+                        print("[VoiceOS] Playback interrupted. Speak your full request again when listening begins.", flush=True)
+                        return False
+        except (OSError, RuntimeError) as exc:
+            print(f"[VoiceOS] Interruption microphone unavailable ({type(exc).__name__}); letting playback finish.", flush=True)
+            process.wait(timeout=120)
+        if process.returncode != 0 and not interrupted:
+            err = process.stderr.read(150).decode(errors="replace") if process.stderr else ""
+            raise RuntimeError(f"afplay exited with {process.returncode}: {err}")
+        return True
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
