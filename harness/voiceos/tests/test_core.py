@@ -62,6 +62,19 @@ class TestVoiceOS(unittest.TestCase):
         self.assertEqual(core.run_agent(agent, "Check", "session-7", on_notification=callback), "Done")
         agent.run.assert_called_once_with("Check", session_id="session-7", on_notification=callback)
 
+    def test_kokoro_cli_and_validation(self):
+        args = core.build_parser().parse_args([
+            "--tts", "kokoro", "--reply-language", "en",
+            "--kokoro-voice", "bm_george", "--kokoro-speed", "0.87",
+            "--kokoro-fallback", "none", "--dashboard"])
+        self.assertEqual(args.tts, "kokoro")
+        self.assertEqual(args.kokoro_voice, "bm_george")
+        self.assertAlmostEqual(args.kokoro_speed, 0.87)
+        self.assertEqual(args.kokoro_fallback, "none")
+        with patch.object(core.sys, "platform", "darwin"):
+            self.assertEqual(core.main(["--tts", "kokoro", "--reply-language", "auto"]), 2)
+            self.assertEqual(core.main(["--tts", "kokoro", "--reply-language", "en", "--kokoro-speed", "2"]), 2)
+
     def test_transcribe_uses_audio_file(self):
         client = MagicMock()
         client.audio.transcriptions.create.return_value.text = "  你好 Ultron  "
