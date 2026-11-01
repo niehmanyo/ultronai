@@ -70,7 +70,7 @@ python -u voiceos/core.py \
 
 本地 UI: http://127.0.0.1:8765
 
-上述命令显式禁用云端 TTS 回退；如果想在本地合成失败时自动尝试付费 GLACIAL TTS，把 `--kokoro-fallback none` 改为 `--kokoro-fallback openai`（默认）。会在终端警告回退即将发生，仍依赖 OPENAI_API_KEY 和网络。
+上述命令显式禁用云端 TTS 回退；如果想在本地合成失败时自动尝试付费 GLACIAL TTS，把 `--kokoro-fallback none` 改为 `--kokoro-fallback openai`（需要显式开启）。会在终端警告回退即将发生，仍依赖 OPENAI_API_KEY 和网络。
 
 对比云端 GLACIAL：
 
