@@ -154,3 +154,17 @@ python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-la
 ```
 
 See [V0.3 tool graph Chinese guide](harness/docs/VOICEOS_AGENT_GRAPH_ZH.md). Visual Cortex PR #5 was observed closed shortly after creation; the target branch comparison indicates the visual changes are already included there. This graph implementation has not yet been Mac integration-tested.
+
+## Dense Neural Cortex UI (UI-only feature branch)
+
+`feature/voiceos-neural-dense-ui` enhances the original WebGL visual cortex with **5,750 point-cloud particles**, volumetric depth cues, subtle neural connections, energy-responsive GPU displacement and minimalist sci-fi HUD. Existing real DSH tool graph and GLACIAL audio RMS animation remain working paths. No Kokoro setup is required or included on this UI branch.
+
+```bash
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python -u voiceos/dashboard_demo.py # free visual demo; Ctrl+C to exit
+python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55 --dashboard
+```
+
+Open http://127.0.0.1:8765. See [Dense Cortex Chinese guide](harness/docs/VOICEOS_NEURAL_DENSE_UI_ZH.md). Visual performance and real speech synchronization must still be verified on your Mac; no PR, main merge, or deployment was performed.

@@ -6,19 +6,25 @@
 <style>
 :root{color-scheme:dark;--cyan:#65f2ef;--line:rgba(87,197,227,.18);--dim:#59829b}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,#0b2a41 0%,#061623 38%,#020810 78%);color:#e4f7ff;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-body:before{content:"";position:fixed;inset:0;opacity:.19;background:linear-gradient(transparent 97%,#23506e 100%),linear-gradient(90deg,transparent 97%,#23506e 100%);background-size:80px 80px;mask-image:radial-gradient(ellipse,black 13%,transparent 77%);pointer-events:none}
+body{margin:0;min-height:100vh;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,#0b3547 0%,#061827 38%,#020810 78%);color:#e4f7ff;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body:before{content:"";position:fixed;inset:0;opacity:.19;background:linear-gradient(transparent 97%,#23506e 100%),linear-gradient(90deg,transparent 97%,#23506e 100%);background-size:110px 110px;mask-image:radial-gradient(ellipse,black 13%,transparent 77%);pointer-events:none}
 main{position:relative;width:100vw;height:100vh;min-height:520px;isolation:isolate}
 #neural3d{position:absolute;inset:0;width:100%;height:100%;z-index:1}
-#coreHalo{position:absolute;z-index:0;top:50%;left:50%;width:min(55vw,530px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(56,249,240,.23),rgba(23,128,192,.11) 27%,transparent 65%);filter:blur(35px);transform:translate(-50%,-50%);opacity:.4;pointer-events:none}
+#coreHalo{position:absolute;z-index:0;top:50%;left:50%;width:min(68vw,720px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(56,249,240,.23),rgba(23,128,192,.11) 27%,transparent 65%);filter:blur(48px);transform:translate(-50%,-50%);opacity:.4;pointer-events:none}
 #fallback3d{position:absolute;z-index:1;left:50%;top:50%;transform:translate(-50%,-50%);width:min(60vw,370px);aspect-ratio:1;border-radius:50%;border:2px solid rgba(97,234,232,.55);box-shadow:0 0 55px #197c9a55,inset 0 0 45px #197c9a55}
 #fallback3d:after{content:"";position:absolute;inset:10%;border:1px dashed #64dbeb;border-radius:50%}
+.scanlines{position:absolute;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0,transparent 5px,rgba(77,203,230,.012) 6px);mask-image:radial-gradient(ellipse at center,black 4%,transparent 80%)}
+.corner{position:absolute;z-index:3;width:37px;height:37px;border-color:#357a93;opacity:.65;pointer-events:none}
+.corner.tl{left:24px;top:75px;border-left:1px solid;border-top:1px solid}
+.corner.tr{right:24px;top:75px;border-right:1px solid;border-top:1px solid}
+.corner.bl{left:24px;bottom:92px;border-left:1px solid;border-bottom:1px solid}
+.corner.br{right:24px;bottom:92px;border-right:1px solid;border-bottom:1px solid}
 .top{position:absolute;z-index:3;top:24px;left:35px;right:35px;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .logo{font-weight:750;font-size:18px;letter-spacing:.36em;text-shadow:0 0 20px #1597bc}.logo span{color:var(--cyan)}
 .info{display:flex;align-items:center;gap:12px;font-size:10px;letter-spacing:.2em;color:#8daabc;font-family:ui-monospace,monospace}.signal{width:7px;height:7px;background:#c36a83;border-radius:100%}.signal.on{background:var(--cyan);box-shadow:0 0 15px var(--cyan)}
-.crosshair{position:absolute;z-index:2;top:50%;left:50%;width:94px;height:94px;border:1px solid #5edcda44;border-radius:100%;transform:translate(-50%,-50%);pointer-events:none}
-.crosshair:after{content:"";position:absolute;inset:14px;border:1px dashed #4da9bf55;border-radius:50%}
-.status{position:absolute;z-index:3;bottom:100px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;text-align:center;pointer-events:none;gap:10px}
+.crosshair{position:absolute;z-index:2;top:50%;left:50%;width:min(64vmin,660px);height:min(64vmin,660px);border:1px solid rgba(87,206,220,.12);border-radius:100%;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 60px rgba(20,126,152,.09),inset 0 0 60px rgba(20,126,152,.07)}
+.crosshair:after{content:"";position:absolute;inset:20px;border:1px dashed rgba(77,169,191,.24);border-radius:50%}
+.status{position:absolute;z-index:3;bottom:85px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;text-align:center;pointer-events:none;gap:10px}
 .status strong{font-size:13px;letter-spacing:.4em;font-weight:550;color:var(--cyan);text-shadow:0 0 19px #12b9df}.status small{font-size:10px;letter-spacing:.11em;color:#739db4;max-width:50ch}
 .footer{position:absolute;bottom:27px;left:35px;right:35px;z-index:3;display:flex;align-items:end;justify-content:space-between;gap:20px}
 .metrics{display:flex;gap:25px;align-items:end}.metric{border-left:1px solid #2b6785;padding-left:11px}.metric b{display:block;font-family:ui-monospace,monospace;font-size:16px;font-weight:500;color:#b9f4f2}.metric small{display:block;margin-top:6px;font-size:9px;letter-spacing:.14em;color:#648ba4}
@@ -32,9 +38,9 @@ main{position:relative;width:100vw;height:100vh;min-height:520px;isolation:isola
 </style>
 </head><body>
 <main>
-<div id="coreHalo"></div><canvas id="neural3d" aria-label="Three dimensional neural core"></canvas><div id="fallback3d" hidden></div><div class="crosshair"></div>
+<div id="coreHalo"></div><div class="scanlines"></div><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div><canvas id="neural3d" aria-label="Three dimensional neural core"></canvas><div id="fallback3d" hidden></div><div class="crosshair"></div>
 <header class="top"><div class="logo"><span>◇</span> ULTRON</div><div class="info"><span id="signal" class="signal"></span><span id="connection">CONNECTING</span><span id="clock"></span></div></header>
-<div class="pill"><span>◈</span> COGNITIVE CORTEX / 3D <span id="tool-label" style="color:#61e6e0;margin-left:12px"></span></div>
+<div class="pill"><span>◈</span> NEURAL ARRAY / 3D <span id="tool-label" style="color:#61e6e0;margin-left:12px"></span></div>
 <div class="statebar" aria-hidden="true"><span data-step="listening"></span><span data-step="transcribing"></span><span data-step="thinking"></span><span data-step="synthesizing"></span><span data-step="speaking"></span></div>
 <div class="status" aria-live="polite"><strong id="status">AWAITING SIGNAL</strong><small id="detail">Local runtime visualization</small></div>
 <footer class="footer"><div class="metrics"><div class="metric"><b id="asr">—</b><small>ASR</small></div><div class="metric"><b id="agent">—</b><small>AGENT</small></div><div class="metric"><b id="tts">—</b><small>TTS + PLAY</small></div><div class="metric"><b id="latency">—</b><small>TOTAL</small></div></div><div class="reply" id="reply">VOICEOS / READY</div></footer>

@@ -30,14 +30,18 @@ class TestDashboard(unittest.TestCase):
             self.assertTrue(url.startswith("http://127.0.0.1:"))
             with urlopen(url, timeout=5) as response:
                 html = response.read().decode()
-                self.assertIn("COGNITIVE CORTEX", html)
+                self.assertIn("NEURAL ARRAY / 3D", html)
                 self.assertIn("neural3d", html)
                 self.assertIn("cortex3d.js", html)
+                self.assertIn("scanlines", html)
             with urlopen(url + "cortex3d.js", timeout=5) as js_response:
                 script = js_response.read().decode()
                 self.assertIn("webgl", script)
                 self.assertIn("UltronNeural", script)
-                self.assertIn("text/html", response.headers["Content-Type"])
+                self.assertIn("denseSphere(2400", script)
+                self.assertIn("denseSphere(1150", script)
+                self.assertIn("updateNetwork", script)
+                self.assertIn("text/javascript", js_response.headers["Content-Type"])
             with self.assertRaises(Exception):
                 urlopen(url + "missing", timeout=5)
         finally:
