@@ -31,12 +31,29 @@ class TestDashboard(unittest.TestCase):
             with urlopen(url, timeout=5) as response:
                 html = response.read().decode()
                 self.assertIn("COGNITIVE CORTEX", html)
-                self.assertIn("No hidden chain of thought", html)
+                self.assertIn("neural3d", html)
+                self.assertIn("cortex3d.js", html)
+            with urlopen(url + "cortex3d.js", timeout=5) as js_response:
+                script = js_response.read().decode()
+                self.assertIn("webgl", script)
+                self.assertIn("UltronNeural", script)
                 self.assertIn("text/html", response.headers["Content-Type"])
             with self.assertRaises(Exception):
                 urlopen(url + "missing", timeout=5)
         finally:
             dash.stop()
+
+    def test_audio_levels_are_transient_and_normalized(self):
+        dash = module.Dashboard(port=0)
+        old = dash.hub.subscribe()
+        dash.audio_level(5.0, turn=3)
+        event = old.get_nowait()
+        self.assertEqual(event["stage"], "audio_level")
+        self.assertEqual(event["metrics"]["level"], 1.0)
+        dash.hub.unsubscribe(old)
+        replay = dash.hub.subscribe()
+        self.assertTrue(replay.empty())
+        dash.hub.unsubscribe(replay)
 
     def test_event_json_is_serializable(self):
         hub = module.EventHub()
