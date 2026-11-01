@@ -14,7 +14,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HARNESS="$(cd "$SCRIPT_DIR/.." && pwd)"
 PYTHON_BIN="$HARNESS/.venv-voiceos312/bin/python"
-if [[ -n "$ULTRON_PYTHON" ]]; then PYTHON_BIN="$ULTRON_PYTHON"; fi
+if [[ -n "${ULTRON_PYTHON:-}" ]]; then PYTHON_BIN="$ULTRON_PYTHON"; fi
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "Missing VoiceOS Python: $PYTHON_BIN" >&2
   echo "Set ULTRON_PYTHON=/absolute/path/to/working/python if necessary." >&2
@@ -30,7 +30,7 @@ if [[ ! -f "$HARNESS/voiceos/core.py" || ! -f "$HARNESS/voiceos/dashboard.html" 
   exit 2
 fi
 APP_DIR="$HOME/Applications/Ultron VoiceOS.app"
-if [[ -n "$ULTRON_APP_DEST" ]]; then APP_DIR="$ULTRON_APP_DEST"; fi
+if [[ -n "${ULTRON_APP_DEST:-}" ]]; then APP_DIR="$ULTRON_APP_DEST"; fi
 if [[ "$APP_DIR" != /* ]]; then
   echo "ULTRON_APP_DEST must be an absolute path." >&2
   exit 2
