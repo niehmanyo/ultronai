@@ -150,6 +150,8 @@ def build_parser():
     p.add_argument("--no-speech", action="store_true", help="Disable macOS TTS playback")
     p.add_argument("--hands-free", action="store_true", help="Automatically detect voice start/end; Ctrl+C to stop")
     p.add_argument("--vad-threshold", type=int, default=550, help="Local mic energy threshold, default 550 (tune for microphone/environment)")
+    p.add_argument("--dashboard", action="store_true", help="Open local read-only JARVIS-style cognitive visualization on 127.0.0.1")
+    p.add_argument("--dashboard-port", type=int, default=8765, help="Local visualization port (default 8765; 0 picks an available port)")
     p.add_argument("--doctor", action="store_true", help="Check dependencies, without making model calls")
     return p
 
@@ -198,6 +200,9 @@ def main(argv=None) -> int:
         print("[VoiceOS] This MVP requires macOS for microphone and speech output.", file=sys.stderr)
         return 2
     configure_proxy()
+    if args.dashboard_port < 0 or args.dashboard_port > 65535:
+        print("[VoiceOS] --dashboard-port must be between 0 and 65535.", file=sys.stderr)
+        return 2
     if not 0 <= args.robotic <= 100:
         print("[VoiceOS] --robotic must be between 0 and 100.", file=sys.stderr)
         return 2
@@ -217,6 +222,20 @@ def main(argv=None) -> int:
     except (ImportError, OSError) as exc:
         print(f"[VoiceOS] Missing dependency: {exc}. Install voiceos/requirements.txt", file=sys.stderr)
         return 2
+
+    dashboard = None
+    if args.dashboard:
+        from dashboard import Dashboard
+        try:
+            dashboard = Dashboard(port=args.dashboard_port)
+            url = dashboard.start()
+            print(f"[VoiceOS] Cognitive dashboard: {url}", flush=True)
+        except OSError as exc:
+            print(f"[VoiceOS] Dashboard unavailable: {exc}. Continuing voice-only.", file=sys.stderr)
+            dashboard = None
+    def observe(stage, **values):
+        if dashboard:
+            dashboard.emit(stage, **values)
 
     client = OpenAI(timeout=90, max_retries=1)
     home = str(Path(os.getenv("DSH_HOME") or Path.home() / ".ultron-dsh").expanduser().resolve())
@@ -242,7 +261,11 @@ def main(argv=None) -> int:
             patches=(str(sdk_patch),), provider=args.provider, model=args.model,
         ) as harness:
             pending_text = args.text
+            turn_number = 0
             while True:
+                turn_number += 1
+                turn_start = time.monotonic()
+                observe("listening", detail="Awaiting voice input", turn=turn_number)
                 if pending_text is not None:
                     user_text = pending_text
                     pending_text = None
@@ -258,25 +281,38 @@ def main(argv=None) -> int:
                                 continue
                         else:
                             capture_wav(wav)
+                        observe("transcribing", detail="Recognizing spoken request", turn=turn_number)
+                        asr_start = time.monotonic()
                         print("[VoiceOS] Transcribing...")
                         user_text = transcribe(client, wav, args.stt_model)
+                        asr_ms = round((time.monotonic() - asr_start) * 1000)
+                        observe("transcribing", detail="Transcription complete", asr_ms=asr_ms, turn=turn_number)
                 if not user_text:
                     print("[VoiceOS] No speech recognized.")
                     continue
+                observe("thinking", detail="DSH Agent processing the request", turn=turn_number)
                 print("[You]", user_text)
                 print("[VoiceOS] Agent processing...")
+                agent_start = time.monotonic()
                 reply = run_agent(harness, user_text, session_id, reply_language=args.reply_language)
+                agent_ms = round((time.monotonic() - agent_start) * 1000)
+                observe("thinking", detail="Agent response completed", agent_ms=agent_ms, turn=turn_number)
                 print("[Ultron]", reply or "(No final assistant message)")
                 if not args.no_speech:
+                    observe("synthesizing", detail="Preparing speech output", turn=turn_number)
+                    tts_start = time.monotonic()
                     if args.tts == "openai":
                         from personas import speak_openai
                         speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic)
                     else:
                         speak(reply, voice=args.voice)
+                    observe("speaking", detail="Speech playback completed", tts_ms=round((time.monotonic()-tts_start)*1000), turn=turn_number)
+                observe("completed", detail="Ready for next conversation", turn_ms=round((time.monotonic()-turn_start)*1000), reply=reply[:1300], turn=turn_number)
     except KeyboardInterrupt:
         print("\n[VoiceOS] Interrupted.")
     except Exception as exc:
         # Never print credential values or full model request objects.
+        observe("error", detail=type(exc).__name__)
         print("[VoiceOS] Error:", safe_diagnostic(exc), file=sys.stderr)
         if "JsonRpcError" in type(exc).__name__:
             if "already exists" in str(exc) or "id collision" in str(exc):
@@ -286,6 +322,9 @@ def main(argv=None) -> int:
         elif isinstance(exc, RuntimeError) and "Microphone" in str(exc):
             print("[VoiceOS] Recording failed before transcription; check installed audio dependencies first.", file=sys.stderr)
         return 1
+    finally:
+        if dashboard:
+            dashboard.stop()
     return 0
 
 
