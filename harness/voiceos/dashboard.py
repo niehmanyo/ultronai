@@ -21,14 +21,15 @@ class EventHub:
         self._history = deque(maxlen=80)
         self._seq = 0
 
-    def emit(self, stage, *, detail="", elapsed_ms=None, **metrics):
+    def emit(self, stage, *, detail="", elapsed_ms=None, transient=False, **metrics):
         safe_detail = str(detail or "")[:180]
         with self._lock:
             self._seq += 1
             event = {"seq": self._seq, "at": time.time(), "stage": stage,
                      "detail": safe_detail, "elapsed_ms": elapsed_ms,
                      "metrics": metrics}
-            self._history.append(event)
+            if not transient:
+                self._history.append(event)
             for subscriber in tuple(self._subscribers):
                 try:
                     subscriber.put_nowait(event)
@@ -83,6 +84,15 @@ class Dashboard:
                     self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
                     self.end_headers()
                     self.wfile.write(body)
+                elif path == "/cortex3d.js":
+                    body = ui_path.with_name("cortex3d.js").read_bytes()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/javascript; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("X-Content-Type-Options", "nosniff")
+                    self.end_headers()
+                    self.wfile.write(body)
                 elif path == "/events":
                     self.send_response(200)
                     self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -117,6 +127,11 @@ class Dashboard:
 
     def emit(self, stage, **kwargs):
         return self.hub.emit(stage, **kwargs)
+
+    def audio_level(self, level, *, turn):
+        # Ephemeral 20 Hz playback meter; never pollute reconnect history.
+        return self.hub.emit("audio_level", transient=True, turn=turn,
+                             level=round(max(0.0, min(1.0, float(level))), 3))
 
     def stop(self):
         if self.server:
