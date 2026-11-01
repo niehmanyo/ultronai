@@ -139,3 +139,18 @@ python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-la
 ```
 
 Open http://127.0.0.1:8765. See `harness/docs/VOICEOS_COGNITIVE_CORTEX_ZH.md`. GitHub code has been pushed; Mac graphics/audio integration still requires hands-on acceptance. No PR or main merge.
+
+### VoiceOS 3D Agent Tool Graph — real DSH activity (feature branch)
+
+On `feature/voiceos-agent-graph`, the existing WebGL Cortex now displays tool nodes when the official DeepSeek Harness SDK reports `tool/call` and marks completion/error only on matching `tool/result` events. Uses `on_notification` from the SDK, supports observed child session activity, anonymizes IDs, and intentionally never forwards tool arguments/results or hidden model reasoning. No voice interruption.
+
+```bash
+git fetch origin && git switch feature/voiceos-agent-graph
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python -u voiceos/dashboard_demo.py  # no API cost; Ctrl+C before live mode
+python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55 --dashboard
+```
+
+See [V0.3 tool graph Chinese guide](harness/docs/VOICEOS_AGENT_GRAPH_ZH.md). The visual Cortex PR #5 remains separate and unmerged; this graph implementation has not yet been Mac integration-tested.
