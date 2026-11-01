@@ -7,6 +7,7 @@ All generated speech must be disclosed as AI-generated to listeners.
 from __future__ import annotations
 
 import subprocess
+import time
 import tempfile
 import wave
 from pathlib import Path
@@ -113,14 +114,49 @@ def synthesize(client, text: str, target: Path, *, persona="prime",
     return target
 
 
-def play_wav(path: Path):
-    """Block while playing WAV via macOS built-in player."""
+def play_wav(path: Path, *, on_start=None, on_audio_level=None):
+    """Play macOS WAV; optionally emit time-aligned visual RMS levels.
+
+    Browser receives only envelope values, never raw voice samples.
+    """
+    levels = []
+    if on_audio_level is not None:
+        from audio_meter import amplitude_envelope
+        levels = amplitude_envelope(path, window_ms=50)
     print(f"[VoiceOS] Playing audio: {path}", flush=True)
-    subprocess.run(["afplay", str(path)], check=True, timeout=120)
-    print("[VoiceOS] Audio playback finished.", flush=True)
+    process = subprocess.Popen(["afplay", str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    try:
+        started = time.monotonic()
+        if on_start is not None:
+            on_start()
+        for index, level in enumerate(levels):
+            if process.poll() is not None:
+                break
+            until = started + index * .05
+            wait = until - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            if process.poll() is not None:
+                break
+            on_audio_level(level)
+        process.wait(timeout=120)
+        if process.returncode:
+            error = process.stderr.read(160).decode(errors="replace") if process.stderr else ""
+            raise RuntimeError(f"macOS audio playback failed: {error}")
+        print("[VoiceOS] Audio playback finished.", flush=True)
+    finally:
+        if on_audio_level is not None:
+            on_audio_level(0.0)
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
 
-def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts", robotic=25):
+def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts", robotic=25, on_playback=None, on_audio_level=None):
     if not text.strip():
         return True
     print("[VoiceOS] Preparing AI speech synthesis...", flush=True)
@@ -133,5 +169,5 @@ def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts",
             playback = process_robotic(output, Path(temp) / "robotic.wav", strength=robotic)
         print(f"[VoiceOS] Speaking with ULTRON {persona.upper()} (AI-generated voice, robotic={robotic}).")
         print("[VoiceOS] Audio effects ready; starting player.", flush=True)
-        play_wav(playback)
+        play_wav(playback, on_start=on_playback, on_audio_level=on_audio_level)
     return True
