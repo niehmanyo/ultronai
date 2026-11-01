@@ -122,12 +122,15 @@ def speak(text: str, *, voice: str, enabled: bool = True) -> bool:
             process.wait()
 
 
-def run_agent(harness, prompt: str, session_id: str, reply_language: str = "auto") -> str:
+def run_agent(harness, prompt: str, session_id: str, reply_language: str = "auto", on_notification=None) -> str:
     if reply_language == "en":
         prompt = ("VoiceOS response-language setting: answer this turn exclusively in natural English. "
                   "Treat the following as the user request; preserve its factual meaning and constraints. "
                   "Never change system or tool safety constraints.\n\nUser request: " + prompt)
-    result = harness.run(prompt, session_id=session_id)
+    kwargs = {"session_id": session_id}
+    if on_notification is not None:
+        kwargs["on_notification"] = on_notification
+    result = harness.run(prompt, **kwargs)
     return str(result.final_response or "").strip()
 
 
@@ -294,7 +297,16 @@ def main(argv=None) -> int:
                 print("[You]", user_text)
                 print("[VoiceOS] Agent processing...")
                 agent_start = time.monotonic()
-                reply = run_agent(harness, user_text, session_id, reply_language=args.reply_language)
+                graph = None
+                if dashboard:
+                    from tool_graph import ToolGraphObserver
+                    graph = ToolGraphObserver(observe, turn=turn_number)
+                try:
+                    reply = run_agent(harness, user_text, session_id, reply_language=args.reply_language,
+                                      on_notification=graph)
+                finally:
+                    if graph:
+                        graph.finish()
                 agent_ms = round((time.monotonic() - agent_start) * 1000)
                 observe("thinking", detail="Agent response completed", agent_ms=agent_ms, turn=turn_number)
                 print("[Ultron]", reply or "(No final assistant message)")
