@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from pathlib import Path
 import time
 
@@ -22,6 +23,7 @@ def main(argv=None):
     parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
     parser.add_argument("--output-dir", type=Path, default=Path("voiceos/voice-previews"))
     parser.add_argument("--no-play", action="store_true")
+    parser.add_argument("--force", action="store_true", help="Regenerate local preview")
     args = parser.parse_args(argv)
     if not 0 <= args.robotic <= 100:
         parser.error("--robotic must be 0..100")
@@ -29,10 +31,12 @@ def main(argv=None):
         parser.error("--speed must be 0.7..1.3")
     from personas import play_wav
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    original = args.output_dir / f"kokoro-{args.voice}-en.wav"
-    processed = args.output_dir / f"kokoro-{args.voice}-en-robotic-{args.robotic}.wav"
+    signature = hashlib.sha256((args.voice + "|" + str(args.speed) + "|" + args.text).encode()).hexdigest()[:10]
+    stem = f"kokoro-{args.voice}-{signature}-en"
+    original = args.output_dir / f"{stem}.wav"
+    processed = args.output_dir / f"{stem}-robotic-{args.robotic}.wav"
     # Real generation is local, but don't trigger it on already cached preview.
-    if not original.is_file() or original.stat().st_size < 100:
+    if args.force or not original.is_file() or original.stat().st_size < 100:
         engine = load_engine(args.model_dir)
         start = time.monotonic()
         synthesize_kokoro(args.text, original, voice=args.voice, speed=args.speed, engine=engine)
