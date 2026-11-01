@@ -1,5 +1,6 @@
-# Optional local Kokoro ONNX INT8 TTS for macOS Python 3.12
-# Install only when using --tts kokoro, base VoiceOS requirements remain unchanged.
-kokoro-onnx>=0.5,<1
-onnxruntime>=1.18,<2
-numpy>=1.26,<3
+# Optional Kokoro INT8 CPU voice backend (macOS Python 3.12)
+# kokoro-onnx 0.6.1 requires NumPy >=2.0.2 and onnxruntime >=1.20.1.
+# Install in the existing voice environment only after local dependency review.
+kokoro-onnx==0.6.1
+onnxruntime>=1.20.1,<2
+numpy>=2.0.2,<3
