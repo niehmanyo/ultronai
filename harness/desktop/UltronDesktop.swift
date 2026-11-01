@@ -240,6 +240,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         environment["NO_PROXY"] = "localhost,127.0.0.1,::1"
         worker.environment = environment
         let combined = Pipe()
+        worker.standardInput = FileHandle.nullDevice
         worker.standardOutput = combined
         worker.standardError = combined
         pipe = combined
