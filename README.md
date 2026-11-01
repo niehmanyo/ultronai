@@ -125,3 +125,17 @@ python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-la
 ```
 
 Visit http://127.0.0.1:8765. See [Chinese Cognitive Cortex guide](harness/docs/VOICEOS_COGNITIVE_CORTEX_ZH.md) for setup, boundaries and acceptance checks. No voice interruption. No PR or merge performed as part of this UI branch.
+
+### Cognitive Cortex V0.2 — 3D WebGL and audio-reactive hub
+
+On `feature/voiceos-visual-cortex`: true perspective 3D neural core with holographic orbit rings and particles; minimal HUD; while GLACIAL is **actually playing**, the sphere pulses to the postprocessed WAV's 50ms RMS envelope over local SSE. No external graphics/CDN dependency; no barge-in; original DSH Agent retained.
+
+```bash
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python -u voiceos/dashboard_demo.py # offline animated demo, Ctrl+C to stop
+python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55 --dashboard
+```
+
+Open http://127.0.0.1:8765. See `harness/docs/VOICEOS_COGNITIVE_CORTEX_ZH.md`. GitHub code has been pushed; Mac graphics/audio integration still requires hands-on acceptance. No PR or main merge.
