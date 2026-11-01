@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import wave
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import numpy as np
 
@@ -36,6 +36,23 @@ class TestHandsfree(unittest.TestCase):
                 self.assertEqual(wav.getnchannels(), 1)
                 self.assertEqual(wav.getframerate(), 16000)
                 self.assertEqual(wav.getnframes(), self.vad.frames * 2)
+
+    def test_wav_barge_in_player_clean_exit(self):
+        from contextlib import nullcontext
+        with tempfile.TemporaryDirectory() as d:
+            output = Path(d) / "sample.wav"
+            hf.write_wav(output, [self.block(100)], rate=self.vad.rate)
+            process = MagicMock()
+            process.poll.return_value = 0
+            process.returncode = 0
+            with patch.object(hf, "_open_stream", return_value=nullcontext()), \
+                 patch.object(hf.subprocess, "Popen", return_value=process) as launch:
+                self.assertTrue(hf.play_wav_with_barge_in(output, vad=self.vad))
+                self.assertEqual(launch.call_args.args[0], ["afplay", str(output)])
+
+    def test_wav_barge_in_requires_source_file(self):
+        with self.assertRaises(FileNotFoundError):
+            hf.play_wav_with_barge_in("/missing/ultron.wav", vad=self.vad)
 
     def test_threshold_rejection(self):
         with self.assertRaises(ValueError):
