@@ -16,6 +16,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var didLoad = false
     private var allowedPort: Int?
     private var closing = false
+    private var floatMode = false
     private let keychainService = "com.ultron.voiceos.desktop"
     private let keychainAccount = "OPENAI_API_KEY"
 
@@ -38,6 +39,11 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         return false
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showWindow(nil)
+        return true
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
         stopWorker()
@@ -54,6 +60,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         app.addItem(NSMenuItem(title: "Restart VoiceOS", action: #selector(restartWorker), keyEquivalent: "r"))
         app.addItem(NSMenuItem(title: "Pause Microphone / Stop Agent", action: #selector(stopListening), keyEquivalent: "p"))
         app.addItem(NSMenuItem(title: "Show Ultron", action: #selector(showWindow), keyEquivalent: "1"))
+        app.addItem(NSMenuItem(title: "Toggle Always on Top", action: #selector(toggleFloating), keyEquivalent: "t"))
         app.addItem(NSMenuItem.separator())
         app.addItem(NSMenuItem(title: "Quit Ultron", action: #selector(quitApp), keyEquivalent: "q"))
         NSApp.mainMenu = bar
@@ -95,10 +102,11 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         let menu = NSMenu()
         let show = NSMenuItem(title: "Show Neural Core", action: #selector(showWindow), keyEquivalent: "")
         let restart = NSMenuItem(title: "Restart Agent", action: #selector(restartWorker), keyEquivalent: "")
+        let float = NSMenuItem(title: "Toggle Always on Top", action: #selector(toggleFloating), keyEquivalent: "")
         let pause = NSMenuItem(title: "Pause Microphone", action: #selector(stopListening), keyEquivalent: "")
         let settings = NSMenuItem(title: "API Key Settings…", action: #selector(editCredentials), keyEquivalent: "")
         let quit = NSMenuItem(title: "Quit Ultron", action: #selector(quitApp), keyEquivalent: "")
-        for item in [show, restart, pause, settings, quit] { item.target = self; menu.addItem(item) }
+        for item in [show, restart, pause, float, settings, quit] { item.target = self; menu.addItem(item) }
         statusItem?.menu = menu
     }
 
@@ -185,6 +193,10 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         stopWorker()
         showLaunchState("MICROPHONE PAUSED", "Ultron has stopped its voice process. Select Restart Agent from the menu to resume.")
         statusItem?.button?.title = "◇ PAUSED"
+    }
+    @objc private func toggleFloating(_ sender: Any?) {
+        floatMode.toggle()
+        window.level = floatMode ? .floating : .normal
     }
     @objc private func showWindow(_ sender: Any?) {
         window.makeKeyAndOrderFront(nil)
