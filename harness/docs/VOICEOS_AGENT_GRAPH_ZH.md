@@ -52,4 +52,4 @@ python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-la
 - 节点间的边当前表示“中央 Agent 与工具”的已知调用关系，不声称工具之间有无法证明的实际依赖。
 - DSH SDK 事件字段基于官方文档，实际 Python 3.12 / deepseek-harness-sdk 0.1.5rc1 行为仍需 Mac 验证。
 - 后续可研究 `tool/ptc-dispatch-start` / `tool/ptc-dispatch` 的子任务真实父子关系，再进一步细分网络。
-- **PR #5 保持原样供审核，本版代码独立在 `feature/voiceos-agent-graph`，尚未创建额外 PR，也未合并 main。**
+- **PR #5 已显示关闭，目标分支对比表明 3D 可视化变更已进入目标分支；这不是本轮操作执行的合并。本版工具图谱独立保存在 `feature/voiceos-agent-graph`，没有创建额外 PR 或修改 main。**
