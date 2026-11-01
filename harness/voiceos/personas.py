@@ -120,7 +120,7 @@ def play_wav(path: Path):
     print("[VoiceOS] Audio playback finished.", flush=True)
 
 
-def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts", robotic=25):
+def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts", robotic=25, on_playback=None):
     if not text.strip():
         return True
     print("[VoiceOS] Preparing AI speech synthesis...", flush=True)
@@ -133,5 +133,7 @@ def speak_openai(client, text: str, *, persona="prime", model="gpt-4o-mini-tts",
             playback = process_robotic(output, Path(temp) / "robotic.wav", strength=robotic)
         print(f"[VoiceOS] Speaking with ULTRON {persona.upper()} (AI-generated voice, robotic={robotic}).")
         print("[VoiceOS] Audio effects ready; starting player.", flush=True)
+        if on_playback is not None:
+            on_playback()
         play_wav(playback)
     return True
