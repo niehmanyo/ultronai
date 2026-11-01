@@ -5,6 +5,7 @@ All activity in this command is synthetic and visibly labeled DEMO.
 Do not use it as a latency or correctness benchmark.
 """
 import argparse
+import math
 import time
 import webbrowser
 from dashboard import Dashboard
@@ -33,7 +34,16 @@ def main():
             ]
             for stage, detail, metrics, duration in phases:
                 dash.emit(stage, detail=detail, turn=number, **metrics)
-                time.sleep(duration)
+                if stage == "speaking":
+                    # Visual-only demo: explicitly simulated speech loudness.
+                    ticks = int(duration / .05)
+                    for j in range(ticks):
+                        amp = max(0, math.sin(j * .37) * .65 + math.sin(j * 1.13) * .23)
+                        dash.audio_level(amp, turn=number)
+                        time.sleep(.05)
+                    dash.audio_level(0, turn=number)
+                else:
+                    time.sleep(duration)
     except KeyboardInterrupt:
         print("\n[DEMO] Exiting.")
     finally:
