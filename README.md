@@ -168,3 +168,22 @@ python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-la
 ```
 
 Open http://127.0.0.1:8765. See [Dense Cortex Chinese guide](harness/docs/VOICEOS_NEURAL_DENSE_UI_ZH.md). Visual performance and real speech synchronization must still be verified on your Mac; no PR, main merge, or deployment was performed.
+
+## Ultron VoiceOS as a native macOS desktop companion (feature branch)
+
+Branch: `feature/voiceos-desktop-assistant` (based on dense Cortex UI; **no Kokoro dependency**). A small Swift AppKit + WKWebView window renders the existing local 3D Cortex, while a managed Python VoiceOS worker continues to provide GLACIAL TTS, hands-free ASR and DeepSeek Harness Agent. The native menu bar and Dock let you show the window, pause the microphone, restart the Agent or quit. OpenAI Platform API keys are stored in macOS Keychain and injected into the worker environment, **never** placed in the executable or command arguments.
+
+One-time macOS installation (requires previously working VoiceOS venv and Apple Command Line Tools):
+
+```bash
+git fetch origin && git switch feature/voiceos-desktop-assistant
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python -m unittest discover -s desktop/tests -v
+bash desktop/build-macos-app.sh
+```
+
+After installation, launch **`~/Applications/Ultron VoiceOS.app`** from Finder or Dock without a Terminal window. First launch prompts for the API key. Closing the window leaves the agent available in the menu bar; **Pause Microphone** stops voice processing, and **Quit Ultron** exits the app.
+
+Full [Chinese setup and security guide](harness/docs/VOICEOS_DESKTOP_APP_ZH.md). This is a locally compiled, ad-hoc-signed shell over the existing checkout and venv, **not** a standalone notarized installer. macOS build and real microphone/WebGL behavior have not been verified on the user's machine. Desktop changes have not been merged to `main`.
