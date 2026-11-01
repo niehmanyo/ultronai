@@ -154,3 +154,19 @@ python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-la
 ```
 
 See [V0.3 tool graph Chinese guide](harness/docs/VOICEOS_AGENT_GRAPH_ZH.md). Visual Cortex PR #5 was observed closed shortly after creation; the target branch comparison indicates the visual changes are already included there. This graph implementation has not yet been Mac integration-tested.
+
+## VoiceOS local TTS: Kokoro-82M INT8 (feature branch)
+
+On `feature/voiceos-kokoro-int8`, local Kokoro 82M INT8 can replace OpenAI Speech playback without replacing OpenAI ASR or the DeepSeek Harness Agent. Model assets are downloaded explicitly outside Git; local synthesis produces PCM WAV, then uses the existing robotic FX and audio-reactive 3D Cortex. GLACIAL remains an optional paid API fallback.
+
+```bash
+cd harness
+source .venv-voiceos312/bin/activate
+python -m pip install -r voiceos/requirements-kokoro.txt
+python voiceos/setup_kokoro.py  # one-time ~116 MB GitHub download
+python voiceos/preview_kokoro.py --voice am_onyx --robotic 55
+python -m unittest discover -s voiceos/tests -v
+python -u voiceos/core.py --hands-free --reply-language en --tts kokoro --kokoro-voice am_onyx --robotic 55 --kokoro-fallback none --dashboard
+```
+
+See [Chinese Kokoro INT8 setup](harness/docs/VOICEOS_KOKORO_INT8_ZH.md). Use `--kokoro-fallback openai` to allow a paid GLACIAL fallback; the default may use cloud TTS on a local error. The branch has not been merged or validated on the user's Mac yet.
