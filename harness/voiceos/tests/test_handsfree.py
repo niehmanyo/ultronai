@@ -46,7 +46,7 @@ class TestHandsfree(unittest.TestCase):
             process.poll.return_value = 0
             process.returncode = 0
             with patch.object(hf, "_open_stream", return_value=nullcontext()), \
-                 patch.object(hf.subprocess, "Popen", return_value=process) as launch:
+                 patch("subprocess.Popen", return_value=process) as launch:
                 self.assertTrue(hf.play_wav_with_barge_in(output, vad=self.vad))
                 self.assertEqual(launch.call_args.args[0], ["afplay", str(output)])
 
