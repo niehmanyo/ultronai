@@ -142,8 +142,12 @@ def build_parser():
     p.add_argument("--sdk-patch", type=Path, default=Path(__file__).resolve().parent / "openai.patch.yml", help="DSH SDK per-launch OpenAI adapter overlay (never stores API Key)")
     p.add_argument("--stt-model", default=os.getenv("ULTRON_STT_MODEL", "gpt-4o-mini-transcribe"))
     p.add_argument("--voice", default=os.getenv("ULTRON_MAC_VOICE", ""))
-    p.add_argument("--tts", choices=("macos", "openai"), default="macos", help="Audio output provider; macos is default and requires no TTS API charges")
+    p.add_argument("--tts", choices=("macos", "openai", "kokoro"), default="macos", help="Audio output provider; macos is default and requires no TTS API charges")
     p.add_argument("--persona", choices=("prime", "sentinel", "sovereign", "glacial"), default="prime", help="Original ULTRON AI voice preset for --tts openai")
+    p.add_argument("--kokoro-voice", choices=("am_onyx", "am_adam", "am_echo", "am_michael", "bm_george", "bm_lewis", "bm_daniel"), default="am_onyx", help="Local English male voice")
+    p.add_argument("--kokoro-speed", type=float, default=0.92, help="Local Kokoro speech rate 0.7 to 1.3")
+    p.add_argument("--kokoro-model-dir", type=Path, default=None, help="Optional local cached model directory")
+    p.add_argument("--kokoro-fallback", choices=("openai", "none"), default="openai", help="On local synthesis failure use paid OpenAI GLACIAL, or stop")
     p.add_argument("--reply-language", choices=("auto", "en"), default="auto", help="Request English-only Agent replies even to Chinese microphone input (best-effort instruction)")
     p.add_argument("--tts-model", default="gpt-4o-mini-tts", help="OpenAI Speech API preview model (deprecated; scheduled shutdown 2027-01-06)")
     p.add_argument("--robotic", type=int, default=25, help="Original voice metallic/electronic filter strength 0..100; 0 disables effect, only for --tts openai")
@@ -179,6 +183,11 @@ def doctor(args) -> int:
     print("[VoiceOS] Provider/model:", args.provider, args.model, "Profile:", args.profile)
     print("[VoiceOS] TTS:", args.tts, "Persona:", args.persona if args.tts == "openai" else "(system voice)", "Robotic:", args.robotic if args.tts == "openai" else "(not applicable)")
     print("[VoiceOS] Agent reply language:", args.reply_language)
+    if args.tts == "kokoro":
+        from kokoro_local import model_paths, model_ready
+        print("[VoiceOS] Kokoro INT8 cached:", model_ready(args.kokoro_model_dir))
+        print("[VoiceOS] Kokoro model:", model_paths(args.kokoro_model_dir)[0])
+        print("[VoiceOS] Kokoro voice:", args.kokoro_voice, "Fallback:", args.kokoro_fallback)
     print("[VoiceOS] SDK patch:", str(args.sdk_patch), "exists" if args.sdk_patch.is_file() else "MISSING")
     print("[VoiceOS] NOTE: SDK has its own runtime and does not attach to DSH Web sessions.")
     return 0
@@ -205,6 +214,12 @@ def main(argv=None) -> int:
     configure_proxy()
     if args.dashboard_port < 0 or args.dashboard_port > 65535:
         print("[VoiceOS] --dashboard-port must be between 0 and 65535.", file=sys.stderr)
+        return 2
+    if args.tts == "kokoro" and not 0.7 <= args.kokoro_speed <= 1.3:
+        print("[VoiceOS] --kokoro-speed must be in 0.7..1.3.", file=sys.stderr)
+        return 2
+    if args.tts == "kokoro" and args.reply_language != "en":
+        print("[VoiceOS] Kokoro v1.0 INT8 is English-only: use --reply-language en.", file=sys.stderr)
         return 2
     if not 0 <= args.robotic <= 100:
         print("[VoiceOS] --robotic must be between 0 and 100.", file=sys.stderr)
@@ -241,6 +256,18 @@ def main(argv=None) -> int:
             dashboard.emit(stage, **values)
 
     client = OpenAI(timeout=90, max_retries=1)
+    kokoro_engine = None
+    if args.tts == "kokoro":
+        from kokoro_local import load_engine, KokoroLocalError
+        try:
+            kokoro_engine = load_engine(args.kokoro_model_dir)
+        except (KokoroLocalError, OSError) as exc:
+            if args.kokoro_fallback == "none":
+                print(f"[VoiceOS] Kokoro unavailable: {safe_diagnostic(exc)}", file=sys.stderr)
+                if dashboard:
+                    dashboard.stop()
+                return 2
+            print(f"[VoiceOS] Kokoro unavailable ({type(exc).__name__}); using paid OpenAI GLACIAL fallback.", file=sys.stderr)
     home = str(Path(os.getenv("DSH_HOME") or Path.home() / ".ultron-dsh").expanduser().resolve())
     workspace = str(args.workspace.expanduser().resolve())
     if not Path(workspace).is_dir():
@@ -313,9 +340,26 @@ def main(argv=None) -> int:
                 if not args.no_speech:
                     observe("synthesizing", detail="Preparing speech output", turn=turn_number)
                     tts_start = time.monotonic()
-                    if args.tts == "openai":
+                    on_playback = lambda: observe("speaking", detail="AI voice now playing", turn=turn_number)
+                    on_audio_level = (lambda level: dashboard.audio_level(level, turn=turn_number)) if dashboard else None
+                    if args.tts == "kokoro" and kokoro_engine is not None:
+                        from kokoro_local import speak_kokoro, KokoroLocalError
+                        try:
+                            speak_kokoro(reply, voice=args.kokoro_voice, speed=args.kokoro_speed,
+                                         robotic=args.robotic, model_dir=args.kokoro_model_dir, engine=kokoro_engine,
+                                         on_playback=on_playback, on_audio_level=on_audio_level)
+                        except KokoroLocalError as exc:
+                            if args.kokoro_fallback == "none":
+                                raise
+                            print(f"[VoiceOS] Local Kokoro inference failed ({type(exc).__name__}); switching reply to paid OpenAI GLACIAL.", file=sys.stderr)
+                            from personas import speak_openai
+                            speak_openai(client, reply, persona="glacial", model=args.tts_model, robotic=args.robotic,
+                                         on_playback=on_playback, on_audio_level=on_audio_level)
+                    elif args.tts in ("kokoro", "openai"):
                         from personas import speak_openai
-                        speak_openai(client, reply, persona=args.persona, model=args.tts_model, robotic=args.robotic, on_playback=lambda: observe("speaking", detail="AI voice now playing", turn=turn_number), on_audio_level=(lambda level: dashboard.audio_level(level, turn=turn_number)) if dashboard else None)
+                        persona = "glacial" if args.tts == "kokoro" else args.persona
+                        speak_openai(client, reply, persona=persona, model=args.tts_model, robotic=args.robotic,
+                                     on_playback=on_playback, on_audio_level=on_audio_level)
                     else:
                         observe("speaking", detail="macOS voice now playing", turn=turn_number)
                         speak(reply, voice=args.voice)
