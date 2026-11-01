@@ -1,0 +1,7 @@
+# Per-invocation DSH SDK overlay. Does not modify the user's Web profile.
+# Credentials are resolved from OPENAI_API_KEY at request time; no secrets here.
+- id: llm-pi-ai
+  config:
+    providers:
+      openai:
+        apiKeyEnv: OPENAI_API_KEY

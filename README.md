@@ -75,3 +75,40 @@ bash start-local.sh
 Keep the terminal open. In Settings > Models select the OpenAI model, run a short task, and inspect usage on OpenAI Platform. Confirm no API key appears in Git. To revert the visual change, disable/remove the Chrome extension; to revert provider setup, restore the local dsh profile backup or edit the provider in Settings.
 
 This is an interim branding adapter, not a separately compiled or fully rebranded dsh frontend. Do **not** expose the tool-enabled Agent to the public internet.
+
+
+## VoiceOS V0.1a — Mac terminal voice core (feature branch)
+
+This feature is developed on \`feature/voiceos-core-mvp\` and intentionally has **no sci-fi UI yet**. It connects the Mac microphone → OpenAI ASR → official DSH Python SDK Agent → macOS speech output, with playback interruption. It uses a **separate SDK runtime from DSH Web**, not a shared Web Session.
+
+\`\`\`bash
+git fetch origin
+git switch feature/voiceos-core-mvp
+cd harness
+python3 -m venv .venv-voiceos
+source .venv-voiceos/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --pre -r voiceos/requirements.txt
+python -m unittest discover -s voiceos/tests -v
+python voiceos/core.py --doctor
+# Supply OPENAI_API_KEY securely in this terminal; see the Chinese guide.
+python voiceos/core.py --text "用中文说你好" --no-speech
+python voiceos/core.py
+\`\`\`
+
+Read the complete [VoiceOS Chinese setup and acceptance guide](harness/docs/VOICEOS_CORE_V01_ZH.md) before testing. Python SDK's \`sdk\` profile requires a compatible OpenAI provider registration; working DSH Web credentials do not by themselves establish SDK-provider compatibility. Do not switch the provider to DeepSeek or claim real-world integration is validated without local Mac testing. No PR or Render deployment is part of this feature branch.
+
+### VoiceOS V0.1b — hands-free voice (experimental)
+
+The same core now supports automatically segmented microphone turns and optional voice interruption during macOS TTS. Both are terminal-only and reuse the already working OpenAI ASR / DSH SDK / system `say` pipeline.
+
+```bash
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python voiceos/core.py --hands-free
+# Headphones strongly recommended for experimental voice interruption:
+python voiceos/core.py --hands-free --barge-in
+```
+
+The existing push-to-talk command `python voiceos/core.py` remains the default and rollback option. **ASR/TTS are still turn-based, not streaming**, and the VAD uses local amplitude detection, not echo cancellation. See the Chinese manual for limitations and verification.
