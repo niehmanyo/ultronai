@@ -153,4 +153,4 @@ python -u voiceos/dashboard_demo.py  # no API cost; Ctrl+C before live mode
 python -u voiceos/core.py --hands-free --tts openai --persona glacial --reply-language en --robotic 55 --dashboard
 ```
 
-See [V0.3 tool graph Chinese guide](harness/docs/VOICEOS_AGENT_GRAPH_ZH.md). The visual Cortex PR #5 remains separate and unmerged; this graph implementation has not yet been Mac integration-tested.
+See [V0.3 tool graph Chinese guide](harness/docs/VOICEOS_AGENT_GRAPH_ZH.md). Visual Cortex PR #5 was observed closed shortly after creation; the target branch comparison indicates the visual changes are already included there. This graph implementation has not yet been Mac integration-tested.
