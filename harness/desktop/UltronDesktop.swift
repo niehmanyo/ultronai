@@ -46,7 +46,13 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
-        stopWorker()
+        if let worker = process, worker.isRunning {
+            // Application termination does not wait for asynchronous cleanup.
+            // Ensure the Python microphone process does not survive an app quit.
+            Darwin.kill(worker.processIdentifier, SIGTERM)
+        }
+        pipe?.fileHandleForReading.readabilityHandler = nil
+        process = nil
     }
 
     private func installMainMenu() {
@@ -187,8 +193,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
     @objc private func editCredentials(_ sender: Any?) { showCredentialPrompt(firstRun: false) }
     @objc private func restartWorker(_ sender: Any?) {
-        stopWorker()
-        startVoiceOS()
+        stopWorker { [weak self] in self?.startVoiceOS() }
     }
     @objc private func stopListening(_ sender: Any?) {
         stopWorker()
@@ -260,7 +265,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         process = worker
         combined.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let bytes = handle.availableData
-            if bytes.isEmpty { return }
+            if bytes.isEmpty { handle.readabilityHandler = nil; return }
             guard let chunk = String(data: bytes, encoding: .utf8) else { return }
             DispatchQueue.main.async { self?.consumeLog(chunk) }
         }
@@ -301,23 +306,31 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         }
     }
 
-    private func stopWorker() {
-        guard let worker = process else { return }
+    private func stopWorker(after completion: (() -> Void)? = nil) {
+        guard let worker = process else { completion?(); return }
         pipe?.fileHandleForReading.readabilityHandler = nil
         worker.terminationHandler = nil
         process = nil
-        if worker.isRunning {
-            // SIGINT reaches the Python main thread as KeyboardInterrupt,
-            // letting the DSH context manager unwind and close gracefully.
-            Darwin.kill(worker.processIdentifier, SIGINT)
-            DispatchQueue.global(qos: .utility).async {
-                let deadline = Date().addingTimeInterval(4)
-                while worker.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.1) }
-                if worker.isRunning { worker.terminate() }
-                worker.waitUntilExit()
-            }
-        }
         pipe = nil
+        guard worker.isRunning else { completion?(); return }
+        let pid = worker.processIdentifier
+        Darwin.kill(pid, SIGINT)
+        // Wait off the main UI thread. Do not start another microphone worker
+        // until this process is fully gone.
+        DispatchQueue.global(qos: .utility).async {
+            let gentleDeadline = Date().addingTimeInterval(3)
+            while worker.isRunning && Date() < gentleDeadline {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+            if worker.isRunning { worker.terminate() }
+            let hardDeadline = Date().addingTimeInterval(1.5)
+            while worker.isRunning && Date() < hardDeadline {
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+            if worker.isRunning { Darwin.kill(pid, SIGKILL) }
+            worker.waitUntilExit()
+            DispatchQueue.main.async { completion?() }
+        }
     }
 }
 
