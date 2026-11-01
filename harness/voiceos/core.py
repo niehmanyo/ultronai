@@ -181,7 +181,7 @@ def doctor(args) -> int:
         except OSError:
             print("[VoiceOS] macOS say: not available")
     print("[VoiceOS] Provider/model:", args.provider, args.model, "Profile:", args.profile)
-    print("[VoiceOS] TTS:", args.tts, "Persona:", args.persona if args.tts == "openai" else "(system voice)", "Robotic:", args.robotic if args.tts == "openai" else "(not applicable)")
+    print("[VoiceOS] TTS:", args.tts, "Voice:", args.kokoro_voice if args.tts == "kokoro" else args.persona if args.tts == "openai" else "(system voice)", "Robotic:", args.robotic if args.tts in ("kokoro", "openai") else "(not applicable)")
     print("[VoiceOS] Agent reply language:", args.reply_language)
     if args.tts == "kokoro":
         from kokoro_local import model_paths, model_ready
