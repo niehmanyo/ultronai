@@ -50,6 +50,8 @@ def main(argv=None):
     parser.add_argument("--force", action="store_true", help="Redownload files and overwrite local cache")
     args = parser.parse_args(argv)
     root = args.model_dir.expanduser()
+    from core import configure_proxy
+    configure_proxy()
     model_path, voices_path = model_paths(root)
     try:
         download_asset(MODEL_NAME, model_path, min_bytes=FILES[MODEL_NAME], force=args.force)
