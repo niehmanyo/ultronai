@@ -212,7 +212,7 @@ def play_wav_with_barge_in(path, *, vad: MicVAD, min_play_seconds=0.7) -> bool:
                             process.wait()
                         print("[VoiceOS] Playback interrupted. Speak your full request again when listening begins.", flush=True)
                         return False
-        except (OSError, RuntimeError) as exc:
+        except Exception as exc:
             print(f"[VoiceOS] Interruption microphone unavailable ({type(exc).__name__}); letting playback finish.", flush=True)
             process.wait(timeout=120)
         if process.returncode != 0 and not interrupted:
