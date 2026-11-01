@@ -161,7 +161,6 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         if update != errSecItemNotFound { return false }
         var creation = base
         creation[kSecValueData as String] = secret
-        creation[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         return SecItemAdd(creation as CFDictionary, nil) == errSecSuccess
     }
 
