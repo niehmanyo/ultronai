@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#061827"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ultron Remote">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>ULTRON // REMOTE</title>
+<style>
+:root{color-scheme:dark;--bg:#030b15;--panel:#0a1b2b;--line:#1a3b50;--cyan:#70e8e6;--muted:#7b9bb0;--text:#e6f6ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -10%,#10334a 0%,var(--bg) 60%);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100dvh}
+button,input,textarea{font:inherit}button{cursor:pointer}
+.shell{max-width:850px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
+header{height:66px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);flex-shrink:0}
+.brand{font-weight:800;letter-spacing:.28em;color:var(--cyan);font-size:16px}.brand span{color:#e9ffff}
+.status{display:flex;align-items:center;gap:8px;color:var(--muted);font:10px ui-monospace,monospace;letter-spacing:.12em}
+.dot{width:7px;height:7px;border-radius:50%;background:#a35c70}.dot.online{background:#65e9cb;box-shadow:0 0 12px #65e9cb}
+.head-actions{display:flex;gap:8px}.ghost{border:1px solid var(--line);background:#0b1c2b;color:#8eb3c7;border-radius:10px;padding:8px 10px;font-size:11px}
+main{flex:1;display:flex;flex-direction:column;min-height:0}
+.hero{padding:28px 0 20px;display:flex;align-items:center;gap:16px}
+.orb{width:70px;height:70px;flex-shrink:0;border:1px solid #327e94;border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-size:31px;box-shadow:0 0 32px #1b809544,inset 0 0 24px #1b809533;position:relative}
+.orb:before,.orb:after{content:"";position:absolute;inset:-8px;border:1px dashed #3c8295;border-radius:50%;animation:spin 24s linear infinite}.orb:after{inset:-15px;opacity:.35;animation-direction:reverse;animation-duration:38s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hero h1{font-size:14px;letter-spacing:.2em;margin:0 0 7px;font-weight:600}.hero p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+.chat{flex:1;min-height:260px;overflow:auto;padding:4px 0 20px;scroll-behavior:smooth}
+.welcome{text-align:center;color:#7898ad;font-size:12px;padding:40px 15px;line-height:1.8}
+.message{display:flex;margin:13px 0}.message.user{justify-content:flex-end}
+.bubble{max-width:min(88%,660px);padding:12px 14px;border:1px solid var(--line);background:#0b1d2c;border-radius:15px 15px 15px 4px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.6}
+.user .bubble{background:#12394c;border-color:#24617a;border-radius:15px 15px 4px 15px}
+.meta{font-size:9px;color:#7395a9;margin:0 4px 5px;letter-spacing:.12em}
+.event{font-size:11px;color:#7dbec6;padding:4px 12px;margin:4px 0 4px 8px;border-left:1px solid #28718a}
+.typing{display:inline-flex;gap:4px;padding:4px}.typing i{width:5px;height:5px;background:var(--cyan);border-radius:50%;animation:pulse 1s infinite alternate}.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}@keyframes pulse{to{opacity:.25;transform:translateY(-3px)}}
+.composer{position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 15%);flex-shrink:0}
+.composebox{display:flex;align-items:flex-end;gap:9px;padding:8px;border:1px solid #28536a;background:#091a29;border-radius:17px;box-shadow:0 10px 35px #0005}
+textarea{resize:none;flex:1;min-height:42px;max-height:140px;border:0;outline:0;background:transparent;color:var(--text);padding:10px 8px;font-size:14px;line-height:1.45}
+textarea::placeholder{color:#628196}
+.send{width:42px;height:42px;border:0;border-radius:13px;background:linear-gradient(135deg,#7cf2e8,#3e9fbd);color:#04202b;font-size:20px;font-weight:800}
+.send:disabled{opacity:.35;cursor:default}
+.hint{text-align:center;color:#59798d;font-size:9px;margin:8px 0 0;letter-spacing:.08em}
+.overlay{position:fixed;inset:0;background:#020812eF;display:grid;place-items:center;padding:22px;z-index:10}
+.dialog{width:min(100%,390px);background:#0b1c2b;border:1px solid #28536a;border-radius:20px;padding:22px;box-shadow:0 20px 80px #0009}
+.dialog h2{font-size:15px;letter-spacing:.16em;margin:0 0 9px}.dialog p{font-size:12px;color:var(--muted);line-height:1.6}
+.dialog input{width:100%;background:#06111d;border:1px solid #254b60;border-radius:10px;color:white;padding:13px;margin:10px 0}
+.primary{width:100%;padding:13px;border:0;border-radius:10px;background:#70e8e6;color:#06202a;font-weight:700}
+.hidden{display:none!important}
+@media(min-width:700px){.shell{padding-left:26px;padding-right:26px}.hero{padding-top:38px}.chat{padding-left:35px;padding-right:35px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+ <div class="brand"><span>◇</span> ULTRON</div>
+ <div class="head-actions"><div class="status"><i id="dot" class="dot"></i><span id="status">DISCONNECTED</span></div><button id="logout" class="ghost">LOCK</button></div>
+</header>
+<main>
+ <section class="hero"><div class="orb">◇</div><div><h1>REMOTE COMMAND</h1><p id="subline">Your Mac-hosted Agent, wherever you are.</p></div></section>
+ <section id="chat" class="chat" aria-live="polite"><div class="welcome" id="welcome">ULTRON REMOTE READY<br>Send a message to begin a secure session.</div></section>
+ <section class="composer"><div class="composebox"><textarea id="message" rows="1" maxlength="12000" placeholder="Message Ultron…"></textarea><button id="send" class="send" aria-label="Send">↑</button></div><div class="hint">PRIVATE MAC HOST · DSH AGENT · ENTER TO SEND</div></section>
+</main>
+</div>
+<div id="auth" class="overlay hidden"><div class="dialog"><h2>AUTHENTICATE ULTRON</h2><p>Enter the private access token generated on your Mac. It is kept in this browser session only.</p><input id="token" type="password" autocomplete="current-password" placeholder="Remote access token"><button id="connect" class="primary">CONNECT SECURELY</button><p id="auth-error" class="hidden" style="color:#ef9ba9"></p></div></div>
+<script>
+(()=>{"use strict";
+const $=id=>document.getElementById(id);
+const tokenKey="ultron.remote.token",sessionKey="ultron.remote.session",historyKey="ultron.remote.history";
+let token=sessionStorage.getItem(tokenKey)||"",sessionId=localStorage.getItem(sessionKey)||("ultron-remote-"+crypto.randomUUID().replaceAll("-",""));
+localStorage.setItem(sessionKey,sessionId);let busy=false,history=[];
+try{history=JSON.parse(sessionStorage.getItem(historyKey)||"[]")}catch{}
+function authHeader(){return {"Authorization":"Bearer "+token}}
+function scroll(){const c=$("chat");c.scrollTop=c.scrollHeight}
+function save(){sessionStorage.setItem(historyKey,JSON.stringify(history.slice(-80)))}
+function addMessage(role,text){const row=document.createElement("div");row.className="message "+role;const bubble=document.createElement("div");bubble.className="bubble";bubble.textContent=text;row.appendChild(bubble);$("chat").appendChild(row);scroll();return bubble}
+function addEvent(text){const el=document.createElement("div");el.className="event";el.textContent="◈ "+text;$("chat").appendChild(el);scroll()}
+function renderHistory(){if(history.length){$("welcome").classList.add("hidden");history.forEach(m=>addMessage(m.role,m.text))}}
+function setOnline(ok){$("dot").classList.toggle("online",ok);$("status").textContent=ok?"MAC ONLINE":"DISCONNECTED"}
+async function check(){try{const r=await fetch("/api/health",{headers:authHeader()});if(r.status===401){$("auth").classList.remove("hidden");setOnline(false);return false}if(!r.ok)throw Error();const j=await r.json();setOnline(true);$("subline").textContent="Mac Agent online · "+j.model;return true}catch{setOnline(false);return false}}
+async function connect(){const value=$("token").value.trim();if(!value)return;token=value;try{const r=await fetch("/api/health",{headers:authHeader()});if(!r.ok)throw Error("Invalid token or Mac server unavailable");sessionStorage.setItem(tokenKey,token);$("auth").classList.add("hidden");$("auth-error").classList.add("hidden");await check()}catch(e){token="";$("auth-error").textContent=e.message;$("auth-error").classList.remove("hidden")}}
+function setBusy(value){busy=value;$("send").disabled=value;$("message").disabled=value}
+async function send(){const text=$("message").value.trim();if(!text||busy||!token)return;$("message").value="";$("message").style.height="42px";$("welcome").classList.add("hidden");history.push({role:"user",text});save();addMessage("user",text);const answer=addMessage("assistant","");answer.innerHTML='<span class="typing"><i></i><i></i><i></i></span>';let finalText="",eventBuffer="";
+setBusy(true);$("status").textContent="PROCESSING";
+try{const response=await fetch("/api/chat",{method:"POST",headers:{...authHeader(),"Content-Type":"application/json"},body:JSON.stringify({message:text,session_id:sessionId})});if(response.status===401){sessionStorage.removeItem(tokenKey);token="";$("auth").classList.remove("hidden");throw Error("Authentication expired")}if(!response.ok)throw Error("Mac server returned HTTP "+response.status);
+const reader=response.body.getReader(),decoder=new TextDecoder();while(true){const {value,done}=await reader.read();if(done)break;eventBuffer+=decoder.decode(value,{stream:true});const parts=eventBuffer.split("\n\n");eventBuffer=parts.pop();for(const part of parts){const line=part.split("\n").find(x=>x.startsWith("data: "));if(!line)continue;const event=JSON.parse(line.slice(6));if(event.type==="status"){$("status").textContent=event.stage==="queued"?"QUEUED":"THINKING"}else if(event.type==="tool"){addEvent((event.tool_name||"tool")+" · "+(event.tool_state||"running"))}else if(event.type==="final"){finalText=event.reply||"";answer.textContent=finalText}else if(event.type==="error"){throw Error(event.message||"Agent error")}}}
+if(!finalText)finalText="Connection ended before a final response was received.";answer.textContent=finalText;history.push({role:"assistant",text:finalText});save();
+}catch(e){answer.textContent="Unable to complete: "+e.message;addEvent("Check that the Mac server is running and reachable.")}finally{setBusy(false);setOnline(await check());$("status").textContent="READY";$("message").focus()}}
+$("connect").addEventListener("click",connect);$("token").addEventListener("keydown",e=>{if(e.key==="Enter")connect()});
+$("logout").addEventListener("click",()=>{token="";sessionStorage.removeItem(tokenKey);$("auth").classList.remove("hidden");setOnline(false)});
+$("send").addEventListener("click",send);$("message").addEventListener("input",e=>{e.target.style.height="42px";e.target.style.height=Math.min(e.target.scrollHeight,140)+"px"});$("message").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});
+renderHistory();if(token){check().then(ok=>{if(!ok)$("auth").classList.remove("hidden")})}else $("auth").classList.remove("hidden");
+if("serviceWorker" in navigator && location.protocol==="https:")navigator.serviceWorker.register("/sw.js").catch(()=>{});
+})();
+</script>
+</body></html>
