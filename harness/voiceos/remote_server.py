@@ -293,7 +293,7 @@ def main(argv=None):
             server.daemon_threads = True
             print(f"[Ultron Remote] Listening: http://{args.host}:{server.server_address[1]}", flush=True)
             print(f"[Ultron Remote] Access token file: {TOKEN_PATH}", flush=True)
-            print("[Ultron Remote] Token (enter once in the phone web app):", token, flush=True)
+            print("[Ultron Remote] Retrieve the access token locally from ~/.ultron/remote-access-token.", flush=True)
             print("[Ultron Remote] Keep this server private. Use Tailscale Serve for remote HTTPS.", flush=True)
             try:
                 server.serve_forever()
