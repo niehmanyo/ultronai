@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parent
 HARNESS_ROOT = ROOT.parent
 TOKEN_PATH = Path.home() / ".ultron" / "remote-access-token"
-MAX_BODY = 24 * 1024
+MAX_BODY = 48 * 1024
 MAX_MESSAGE = 12_000
 SESSION_RE = re.compile(r"^[a-zA-Z0-9_-]{8,80}$")
 
