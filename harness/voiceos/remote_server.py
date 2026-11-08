@@ -203,6 +203,11 @@ def main(argv=None):
                 self.headers_out(200, "text/html; charset=utf-8", len(body))
                 self.wfile.write(body)
                 return
+            if path == "/sw.js":
+                body = (ROOT / "remote_sw.js").read_bytes()
+                self.headers_out(200, "text/javascript; charset=utf-8", len(body), cache="no-cache")
+                self.wfile.write(body)
+                return
             if path == "/manifest.webmanifest":
                 body = json.dumps(manifest).encode()
                 self.headers_out(200, "application/manifest+json", len(body))
