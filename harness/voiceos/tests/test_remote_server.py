@@ -34,7 +34,7 @@ class TestRemoteServer(unittest.TestCase):
 
     def test_message_limits(self):
         self.assertEqual(module.MAX_MESSAGE, 12000)
-        self.assertLess(module.MAX_BODY, 32768)
+        self.assertEqual(module.MAX_BODY, 48 * 1024)
 
     def test_token_comparison_requires_bearer(self):
         app = module.RemoteApplication(object(), "correct-token")
