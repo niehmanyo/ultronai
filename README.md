@@ -187,3 +187,21 @@ bash desktop/build-macos-app.sh
 After installation, launch **`~/Applications/Ultron VoiceOS.app`** from Finder or Dock without a Terminal window. First launch prompts for the API key. Closing the window leaves the agent available in the menu bar; **Pause Microphone** stops voice processing, and **Quit Ultron** exits the app.
 
 Full [Chinese setup and security guide](harness/docs/VOICEOS_DESKTOP_APP_ZH.md). This is a locally compiled, ad-hoc-signed shell over the existing checkout and venv, **not** a standalone notarized installer. macOS build and real microphone/WebGL behavior have not been verified on the user's machine. Desktop changes have not been merged to `main`.
+
+## Ultron Desktop Core V0.8 — floating neural orb
+
+Feature branch: `feature/ultron-desktop-core-v08` (based on `feature/voiceos-desktop-assistant`, no main changes).
+
+Highlights: native 900-dot 3D mini orb, Option+Space global window shortcut, **microphone OFF on launch** with explicit Start Listening / Pause controls, process restart sequencing and a startup watchdog. The original full 5,750-dot Neural Cortex, GLACIAL voice and DSH SDK remain intact.
+
+Mac build / one-time install:
+
+```bash
+cd harness
+source .venv-voiceos312/bin/activate
+python -m unittest discover -s voiceos/tests -v
+python -m unittest discover -s desktop/tests -v
+bash desktop/build-macos-app.sh
+```
+
+The install script backs up the previous app and installs `~/Applications/Ultron VoiceOS.app`. All interaction after installation is available through Finder/Dock/menu bar. This is still a local build requiring the existing project and Python venv, not a notarized standalone app. Full [Chinese V0.8 setup and verification guide](harness/docs/ULTRON_DESKTOP_CORE_V08_ZH.md). Swift build and microphone permissions **must be validated on the user's Mac**.
