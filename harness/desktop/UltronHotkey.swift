@@ -23,7 +23,7 @@ final class UltronHotkey {
                     return OSStatus(eventNotHandledErr)
                 }
                 let owner = Unmanaged<UltronHotkey>.fromOpaque(context).takeUnretainedValue()
-                var pressed = EventHotKeyID()
+                var pressed = EventHotKeyID(signature: 0, id: 0)
                 let status = GetEventParameter(event, UInt32(kEventParamDirectObject),
                     UInt32(typeEventHotKeyID), nil,
                     UInt32(MemoryLayout<EventHotKeyID>.size), nil, &pressed)
