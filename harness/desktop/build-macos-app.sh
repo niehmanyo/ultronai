@@ -57,8 +57,8 @@ info = {
     "CFBundleName": "Ultron VoiceOS",
     "CFBundleDisplayName": "Ultron VoiceOS",
     "CFBundlePackageType": "APPL",
-    "CFBundleShortVersionString": "0.1.0",
-    "CFBundleVersion": "1",
+    "CFBundleShortVersionString": "0.8.0",
+    "CFBundleVersion": "8",
     "LSMinimumSystemVersion": "14.0",
     "NSHighResolutionCapable": True,
     "NSMicrophoneUsageDescription": "Ultron needs microphone access for hands-free voice requests.",
@@ -68,9 +68,10 @@ info = {
 with Path(path).open("wb") as output:
     plistlib.dump(info, output)
 PY
+cp "$SCRIPT_DIR/Orb.html" "$BUILD_APP/Contents/Resources/Orb.html"
 echo "[Ultron Desktop] Compiling native Cocoa/WebKit app..."
-swiftc -O -framework Cocoa -framework WebKit -framework Security \
-  "$SCRIPT_DIR/UltronDesktop.swift" -o "$BUILD_APP/Contents/MacOS/UltronVoiceOS"
+swiftc -O -framework Cocoa -framework WebKit -framework Security -framework Carbon \
+  "$SCRIPT_DIR/UltronDesktop.swift" "$SCRIPT_DIR/UltronOrb.swift" "$SCRIPT_DIR/UltronHotkey.swift" -o "$BUILD_APP/Contents/MacOS/UltronVoiceOS"
 chmod 755 "$BUILD_APP/Contents/MacOS/UltronVoiceOS"
 if command -v codesign >/dev/null 2>&1; then
   codesign --force --sign - "$BUILD_APP" >/dev/null
@@ -83,5 +84,6 @@ fi
 mv "$BUILD_APP" "$APP_DIR"
 echo "[Ultron Desktop] Installed $APP_DIR"
 echo "[Ultron Desktop] This is NOT a standalone distribution: keep $HARNESS and $PYTHON_BIN in place."
-echo "[Ultron Desktop] First launch will prompt for an OpenAI API key and store it in Keychain."
+echo "[Ultron Desktop] V0.8 starts with microphone OFF. Use Start Listening in the menu bar when ready."
+echo "[Ultron Desktop] Global shortcut: Option+Space (unless owned by another application)."
 open "$APP_DIR"
