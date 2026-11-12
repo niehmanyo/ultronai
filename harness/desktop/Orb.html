@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
+canvas{width:100%;height:100%;display:block;cursor:pointer}
+</style></head><body><canvas id="orb" aria-label="Expand Ultron"></canvas>
+<script>
+(()=>{"use strict";
+const canvas=document.getElementById("orb"),ctx=canvas.getContext("webgl",{alpha:true,antialias:true,premultipliedAlpha:false});
+if(!ctx){const c=canvas.getContext("2d");if(c){canvas.width=144;canvas.height=144;c.strokeStyle="#63ebed";c.beginPath();c.arc(72,72,43,0,Math.PI*2);c.stroke()}return}
+const vs="attribute vec3 position;attribute float weight;uniform float tick;uniform float energy;uniform float ratio;varying float glow;void main(){vec3 p=position;float z=cos(tick)*p.z+sin(tick)*p.x;float x=cos(tick)*p.x-sin(tick)*p.z;p.x=x;p.z=z;float pulse=1.+energy*.08+sin(weight*34.+tick*4.)*.015;p*=pulse;float depth=2.9-p.z;gl_Position=vec4(p.x/depth*1.75,p.y/depth*1.75,0.,1.);gl_Position.x/=ratio;gl_PointSize=(2.5+weight*3.)/depth*2.;glow=.35+weight*.65;}";
+const fs="precision mediump float;uniform float energy;varying float glow;void main(){float d=length(gl_PointCoord-.5);float a=smoothstep(.5,.07,d)*glow*(.55+energy*.45);gl_FragColor=vec4(.38,.92,1.,a);}";
+function shader(type,src){const s=ctx.createShader(type);ctx.shaderSource(s,src);ctx.compileShader(s);if(!ctx.getShaderParameter(s,ctx.COMPILE_STATUS))throw Error(ctx.getShaderInfoLog(s));return s}
+const program=ctx.createProgram();ctx.attachShader(program,shader(ctx.VERTEX_SHADER,vs));ctx.attachShader(program,shader(ctx.FRAGMENT_SHADER,fs));ctx.linkProgram(program);if(!ctx.getProgramParameter(program,ctx.LINK_STATUS))return;
+ctx.useProgram(program);const points=[],n=900,golden=Math.PI*(3-Math.sqrt(5));
+for(let i=0;i<n;i++){const y=1-2*(i+.5)/n,theta=i*golden,rad=Math.sqrt(1-y*y)*(i%7?0.78:0.99);points.push(rad*Math.cos(theta),y*(i%7?.78:.99),rad*Math.sin(theta),.3+.7*((i*37)%97)/97)}
+const buffer=ctx.createBuffer();ctx.bindBuffer(ctx.ARRAY_BUFFER,buffer);ctx.bufferData(ctx.ARRAY_BUFFER,new Float32Array(points),ctx.STATIC_DRAW);
+const pos=ctx.getAttribLocation(program,"position"),w=ctx.getAttribLocation(program,"weight");ctx.enableVertexAttribArray(pos);ctx.enableVertexAttribArray(w);ctx.vertexAttribPointer(pos,3,ctx.FLOAT,false,16,0);ctx.vertexAttribPointer(w,1,ctx.FLOAT,false,16,12);
+const uTick=ctx.getUniformLocation(program,"tick"),uEnergy=ctx.getUniformLocation(program,"energy"),uRatio=ctx.getUniformLocation(program,"ratio");
+ctx.enable(ctx.BLEND);ctx.blendFunc(ctx.SRC_ALPHA,ctx.ONE);
+let state="paused",phase=0,last=0,reduced=matchMedia("(prefers-reduced-motion:reduce)").matches;
+window.ultronOrbState=s=>{state=["paused","ready","thinking","speaking","listening"].includes(s)?s:"paused"};
+function frame(now){const dt=Math.min(.05,(now-last)/1000||0);last=now;if(!reduced)phase+=dt;
+const dpr=Math.min(devicePixelRatio||1,2),width=Math.max(1,Math.round(canvas.clientWidth*dpr)),height=Math.max(1,Math.round(canvas.clientHeight*dpr));
+if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;ctx.viewport(0,0,width,height)}
+ctx.clearColor(0,0,0,0);ctx.clear(ctx.COLOR_BUFFER_BIT);
+const energy=state==="speaking"?.85:state==="thinking"?.58:state==="listening"?.42:state==="ready"?.3:.08;
+ctx.uniform1f(uTick,phase*.24);ctx.uniform1f(uEnergy,energy);ctx.uniform1f(uRatio,width/height);ctx.drawArrays(ctx.POINTS,0,n);
+requestAnimationFrame(frame)}requestAnimationFrame(frame);
+})();
+</script></body></html>
