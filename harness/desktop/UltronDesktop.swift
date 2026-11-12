@@ -105,7 +105,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         webView = WKWebView(frame: rect, configuration: configuration)
         webView.navigationDelegate = self
         webView.autoresizingMask = [.width, .height]
-        webView.setValue(false, forKey: "drawsBackground")
+        webView.underPageBackgroundColor = .clear
         window.contentView = webView
         window.makeKeyAndOrderFront(nil)
         showLaunchState("INITIALIZING ULTRON", "Starting private VoiceOS runtime…")
