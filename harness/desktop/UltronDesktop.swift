@@ -8,7 +8,6 @@ import Darwin
 final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var window: NSWindow!
     private var webView: WKWebView!
-    private var label: NSTextField!
     private var process: Process?
     private var pipe: Pipe?
     private var pending = ""
@@ -17,6 +16,12 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var allowedPort: Int?
     private var closing = false
     private var floatMode = false
+    private var orb: UltronOrb?
+    private var hotkey: UltronHotkey?
+    private var requestStartAfterKey = false
+    private var workerGeneration = 0
+    private var bootWatchdog: DispatchWorkItem?
+    private var stopping = false
     private let keychainService = "com.ultron.voiceos.desktop"
     private let keychainAccount = "OPENAI_API_KEY"
 
@@ -25,12 +30,17 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         installMainMenu()
         createWindow()
         createStatusItem()
-        NSApp.activate(ignoringOtherApps: true)
-        if credentials() == nil {
-            showCredentialPrompt(firstRun: true)
-        } else {
-            startVoiceOS()
+        orb = UltronOrb(onOpen: { [weak self] in self?.showWindow(nil) })
+        orb?.show()
+        orb?.setState("paused")
+        hotkey = UltronHotkey(callback: { [weak self] in self?.toggleWindow() })
+        if hotkey?.register() != true {
+            print("[Ultron Desktop] Option+Space unavailable; use Dock or menu bar.")
         }
+        NSApp.activate(ignoringOtherApps: true)
+        showLaunchState("MICROPHONE OFF", "Ultron is ready. Choose Start Listening from the menu when you want voice input.")
+        statusItem?.button?.title = "◇ MIC OFF"
+        // Explicit opt-in: never begin continuous microphone capture on launch.
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -46,6 +56,9 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         closing = true
+        hotkey?.unregister()
+        bootWatchdog?.cancel()
+        orb?.hide()
         if let worker = process, worker.isRunning {
             // Application termination does not wait for asynchronous cleanup.
             // Ensure the Python microphone process does not survive an app quit.
@@ -63,10 +76,12 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         bar.addItem(appItem)
         app.addItem(NSMenuItem(title: "About Ultron", action: #selector(about), keyEquivalent: ""))
         app.addItem(NSMenuItem(title: "API Key Settings…", action: #selector(editCredentials), keyEquivalent: ","))
+        app.addItem(NSMenuItem(title: "Start Listening", action: #selector(startListening), keyEquivalent: "l"))
         app.addItem(NSMenuItem(title: "Restart VoiceOS", action: #selector(restartWorker), keyEquivalent: "r"))
         app.addItem(NSMenuItem(title: "Pause Microphone / Stop Agent", action: #selector(stopListening), keyEquivalent: "p"))
         app.addItem(NSMenuItem(title: "Show Ultron", action: #selector(showWindow), keyEquivalent: "1"))
         app.addItem(NSMenuItem(title: "Toggle Always on Top", action: #selector(toggleFloating), keyEquivalent: "t"))
+        app.addItem(NSMenuItem(title: "Show / Hide Mini Orb", action: #selector(toggleOrb), keyEquivalent: "o"))
         app.addItem(NSMenuItem.separator())
         app.addItem(NSMenuItem(title: "Quit Ultron", action: #selector(quitApp), keyEquivalent: "q"))
         NSApp.mainMenu = bar
@@ -108,12 +123,14 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         statusItem?.button?.title = "◇ ULTRON"
         let menu = NSMenu()
         let show = NSMenuItem(title: "Show Neural Core", action: #selector(showWindow), keyEquivalent: "")
+        let start = NSMenuItem(title: "Start Listening", action: #selector(startListening), keyEquivalent: "")
         let restart = NSMenuItem(title: "Restart Agent", action: #selector(restartWorker), keyEquivalent: "")
         let float = NSMenuItem(title: "Toggle Always on Top", action: #selector(toggleFloating), keyEquivalent: "")
         let pause = NSMenuItem(title: "Pause Microphone", action: #selector(stopListening), keyEquivalent: "")
+        let mini = NSMenuItem(title: "Toggle Mini Orb", action: #selector(toggleOrb), keyEquivalent: "")
         let settings = NSMenuItem(title: "API Key Settings…", action: #selector(editCredentials), keyEquivalent: "")
         let quit = NSMenuItem(title: "Quit Ultron", action: #selector(quitApp), keyEquivalent: "")
-        for item in [show, restart, pause, float, settings, quit] { item.target = self; menu.addItem(item) }
+        for item in [show, start, restart, pause, float, mini, settings, quit] { item.target = self; menu.addItem(item) }
         statusItem?.menu = menu
     }
 
@@ -187,17 +204,42 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             showError("Could not save the key in macOS Keychain.")
             return
         }
-        restartWorker(nil)
+        if requestStartAfterKey {
+            requestStartAfterKey = false
+            startListening(nil)
+        } else {
+            showLaunchState("MICROPHONE OFF", "Key saved. Select Start Listening from the menu to activate VoiceOS.")
+        }
     }
 
     @objc private func editCredentials(_ sender: Any?) { showCredentialPrompt(firstRun: false) }
+    @objc private func startListening(_ sender: Any?) {
+        if process?.isRunning == true || stopping { return }
+        if credentials() == nil {
+            requestStartAfterKey = true
+            showCredentialPrompt(firstRun: true)
+            return
+        }
+        startVoiceOS()
+    }
     @objc private func restartWorker(_ sender: Any?) {
-        stopWorker { [weak self] in self?.startVoiceOS() }
+        stopWorker { [weak self] in self?.startListening(nil) }
     }
     @objc private func stopListening(_ sender: Any?) {
         stopWorker()
-        showLaunchState("MICROPHONE PAUSED", "Ultron has stopped its voice process. Select Restart Agent from the menu to resume.")
-        statusItem?.button?.title = "◇ PAUSED"
+        showLaunchState("MICROPHONE OFF", "Voice processing stopped. Select Start Listening to resume.")
+        statusItem?.button?.title = "◇ MIC OFF"
+        orb?.setState("paused")
+    }
+    @objc private func toggleOrb(_ sender: Any?) {
+        if orb?.visible == true { orb?.hide() } else { orb?.show() }
+    }
+    private func toggleWindow() {
+        if window.isVisible && window.isKeyWindow {
+            window.orderOut(nil)
+        } else {
+            showWindow(nil)
+        }
     }
     @objc private func toggleFloating(_ sender: Any?) {
         floatMode.toggle()
@@ -225,7 +267,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     }
 
     private func startVoiceOS() {
-        guard !closing else { return }
+        guard !closing && !stopping && process == nil else { return }
         guard let key = credentials() else { showCredentialPrompt(firstRun: true); return }
         guard let harness = Bundle.main.object(forInfoDictionaryKey: "UltronHarnessPath") as? String,
               let python = Bundle.main.object(forInfoDictionaryKey: "UltronPythonPath") as? String else {
@@ -242,9 +284,12 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         didLoad = false
         allowedPort = nil
         pending = ""
-        statusItem?.button?.title = "◇ ULTRON"
+        statusItem?.button?.title = "◇ STARTING"
+        orb?.setState("thinking")
         showLaunchState("INITIALIZING ULTRON", "Preparing GLACIAL voice and the neural interface…")
         let worker = Process()
+        workerGeneration += 1
+        let generation = workerGeneration
         worker.executableURL = pythonURL
         worker.currentDirectoryURL = rootURL
         worker.arguments = ["-u", "voiceos/core.py", "--hands-free",
@@ -273,15 +318,30 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
                 guard let self = self, !self.closing, self.process === worker else { return }
                 self.pipe?.fileHandleForReading.readabilityHandler = nil
                 self.process = nil
+                self.bootWatchdog?.cancel()
+                self.orb?.setState("paused")
+                self.statusItem?.button?.title = "◇ MIC OFF"
                 self.showLaunchState("VOICEOS STOPPED", "Open ULTRON → Restart VoiceOS to try again.")
                 self.showError("VoiceOS exited (code \(finished.terminationStatus)). Verify your SDK setup, network access and microphone permission. To diagnose, run core.py --doctor in the existing environment.")
             }
         }
         do {
             try worker.run()
+            let watchdog = DispatchWorkItem { [weak self, weak worker] in
+                guard let self = self, self.workerGeneration == generation,
+                      self.process === worker, !self.didLoad else { return }
+                self.stopWorker()
+                self.orb?.setState("paused")
+                self.statusItem?.button?.title = "◇ MIC OFF"
+                self.showLaunchState("STARTUP TIMED OUT", "VoiceOS did not open the neural dashboard. Check SDK configuration and restart.")
+            }
+            bootWatchdog?.cancel()
+            bootWatchdog = watchdog
+            DispatchQueue.main.asyncAfter(deadline: .now() + 45, execute: watchdog)
         } catch {
             combined.fileHandleForReading.readabilityHandler = nil
             process = nil
+            orb?.setState("paused")
             showError("Unable to start local Python VoiceOS runtime: \(error.localizedDescription)")
         }
     }
@@ -293,12 +353,22 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         while let end = pending.firstIndex(of: "\n") {
             let line = String(pending[..<end])
             pending = String(pending[pending.index(after: end)...])
+            if line.contains("[VoiceOS] Transcribing") || line.contains("[VoiceOS] Agent processing") {
+                orb?.setState("thinking")
+            } else if line.contains("[VoiceOS] Speaking with ULTRON") {
+                orb?.setState("speaking")
+            } else if line.contains("[VoiceOS] Audio playback finished") || line.contains("[VoiceOS] Hands-free active") {
+                orb?.setState("listening")
+            }
             let prefix = "[VoiceOS] Cognitive dashboard: http://127.0.0.1:"
             if line.hasPrefix(prefix), !didLoad {
                 let suffix = String(line.dropFirst(prefix.count))
                 if let port = Int(suffix), port > 0 && port < 65536 {
                     didLoad = true
+                    bootWatchdog?.cancel()
                     allowedPort = port
+                    statusItem?.button?.title = "◇ LISTENING"
+                    orb?.setState("listening")
                     webView.load(URLRequest(url: URL(string: "http://127.0.0.1:\(port)/")!))
                 }
             }
@@ -306,12 +376,15 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     }
 
     private func stopWorker(after completion: (() -> Void)? = nil) {
+        bootWatchdog?.cancel()
+        workerGeneration += 1
         guard let worker = process else { completion?(); return }
+        stopping = true
         pipe?.fileHandleForReading.readabilityHandler = nil
         worker.terminationHandler = nil
         process = nil
         pipe = nil
-        guard worker.isRunning else { completion?(); return }
+        guard worker.isRunning else { stopping = false; completion?(); return }
         let pid = worker.processIdentifier
         Darwin.kill(pid, SIGINT)
         // Wait off the main UI thread. Do not start another microphone worker
@@ -328,7 +401,10 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             }
             if worker.isRunning { Darwin.kill(pid, SIGKILL) }
             worker.waitUntilExit()
-            DispatchQueue.main.async { completion?() }
+            DispatchQueue.main.async {
+                self.stopping = false
+                completion?()
+            }
         }
     }
 }
