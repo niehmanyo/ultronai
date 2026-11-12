@@ -28,7 +28,7 @@ final class UltronOrb: NSObject {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
         webView = WKWebView(frame: rect, configuration: config)
-        webView.setValue(false, forKey: "drawsBackground")
+        webView.underPageBackgroundColor = .clear
         webView.autoresizingMask = [.width, .height]
         panel.contentView = webView
         super.init()
