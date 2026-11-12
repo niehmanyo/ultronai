@@ -94,6 +94,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
                           styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                           backing: .buffered, defer: false)
         window.title = "ULTRON · Cognitive Cortex"
+        window.isReleasedWhenClosed = false
         window.center()
         window.minSize = NSSize(width: 440, height: 480)
         window.backgroundColor = NSColor(red: 0.015, green: 0.045, blue: 0.075, alpha: 1)
@@ -192,6 +193,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         alert.addButton(withTitle: "Cancel")
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() != .alertFirstButtonReturn {
+            requestStartAfterKey = false
             if firstRun { showLaunchState("SETUP REQUIRED", "Open ULTRON → API Key Settings to continue.") }
             return
         }
@@ -223,6 +225,7 @@ final class UltronApp: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         startVoiceOS()
     }
     @objc private func restartWorker(_ sender: Any?) {
+        if stopping { return }
         stopWorker { [weak self] in self?.startListening(nil) }
     }
     @objc private func stopListening(_ sender: Any?) {
